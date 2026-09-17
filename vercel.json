@@ -1,6 +1,6 @@
 {
-  "rewrites": [
-    { "source": "/", "destination": "/api/vodafone" },
-    { "source": "/index.html", "destination": "/api/vodafone" }
+  "routes": [
+    { "src": "^/(index\\.html)?$", "dest": "/api/vodafone" },
+    { "handle": "filesystem" }
   ]
 }
