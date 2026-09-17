@@ -1,0 +1,6 @@
+{
+  "routes": [
+    { "src": "^/(index\\.html)?$", "dest": "/api/vodafone" },
+    { "handle": "filesystem" }
+  ]
+}
