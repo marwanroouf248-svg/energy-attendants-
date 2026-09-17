@@ -11,7 +11,8 @@ export default async function handler(req, res) {
     if (!block.includes('سيلز') || !block.includes('كوتش') || !block.includes('هاوس كيبنج')) {
       return res.status(500).send('Vodafone labels not found');
     }
-    block = block.replaceAll('سيلز', 'sales').replaceAll('كوتش', 'coach').replaceAll('هاوس كيبنج', 'House Keeping');
+    // Keep the database value "سيلز" intact. Only change the visible label to English.
+    block = block.replaceAll('>سيلز<', '>sales<').replaceAll('>كوتش<', '>coach<').replaceAll('>هاوس كيبنج<', '>House Keeping<');
     html = html.slice(0, start) + block + html.slice(end);
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.setHeader('Cache-Control', 'no-store, max-age=0');
