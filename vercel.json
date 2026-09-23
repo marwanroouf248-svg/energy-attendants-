@@ -1,4 +1,18 @@
 {
+  "headers": [
+    {
+      "source": "/(index\\.html)?",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0" }
+      ]
+    },
+    {
+      "source": "/api/vodafone",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0" }
+      ]
+    }
+  ],
   "routes": [
     { "src": "^/(index\\.html)?$", "dest": "/api/vodafone" },
     { "handle": "filesystem" }
