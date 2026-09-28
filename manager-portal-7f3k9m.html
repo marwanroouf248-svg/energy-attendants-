@@ -177,22 +177,18 @@ function esc2(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&
 function scrollToSection(id){document.getElementById(id)?.scrollIntoView({behavior:'smooth'});}
 let liveTimer=null;let liveRefreshing=false;function startLiveDashboard(){if(liveTimer)return;const tick=async()=>{if(document.hidden||liveRefreshing)return;liveRefreshing=true;try{await refreshDashboard();$('liveStatus').textContent='● LIVE • آخر تحديث '+new Date().toLocaleTimeString('ar-EG');$('liveStatus').style.background='#123a25';$('liveStatus').style.color='#7af0a4';}catch(e){$('liveStatus').textContent='● LIVE • تعذر التحديث';$('liveStatus').style.background='#4a1d1d';$('liveStatus').style.color='#fca5a5';}finally{liveRefreshing=false;}};liveTimer=setInterval(tick,5000);tick();}function stopLiveDashboard(){if(liveTimer){clearInterval(liveTimer);liveTimer=null;}}document.addEventListener('visibilitychange',()=>{if(!document.hidden&&document.getElementById('dash')&&!document.getElementById('dash').classList.contains('hidden')){if(!liveTimer)startLiveDashboard();}});async function refreshDashboard(){
  try{
-  const today=cairoDate();
-  const [sj,rj,qj]=await Promise.all([
-   api('manager_summary'),
-   api('manager_report',{from:today,to:today}),
-   approvalApi('manager_requests',{})
-  ]);
+  const sj=await api('manager_summary');
   dashboardEmployees=sj.employees||[];
-  dashboardRows=rj.rows||[];
-  dashboardRequests=qj.requests||[];
+  dashboardRequests=sj.requests||[];
+  dashboardBreaks=sj.breaks||[];
+  dashboardBreakIds=new Set(dashboardBreaks.filter(x=>!x.ended_at).map(x=>x.employee_id));
+  const today=cairoDate();
+  const allAttendance=sj.attendance||[];
+  dashboardRows=allAttendance.filter(r=>new Date(r.check_in).toLocaleDateString('en-CA',{timeZone:'Africa/Cairo'})===today);
   const openIds=new Set((sj.open||[]).map(x=>x.employee_id));
-  const breakIds=new Set((sj.breaks||[]).filter(x=>!x.ended_at).map(x=>x.employee_id));dashboardBreaks=sj.breaks||[];dashboardBreakIds=breakIds;
   const pending=dashboardRequests.filter(x=>x.status==='pending');
   const todayByEmp={};
-  dashboardRows.forEach(r=>{
-   if(!todayByEmp[r.employee_id] || new Date(r.check_in)>new Date(todayByEmp[r.employee_id].check_in)) todayByEmp[r.employee_id]=r;
-  });
+  dashboardRows.forEach(r=>{if(!todayByEmp[r.employee_id]||new Date(r.check_in)>new Date(todayByEmp[r.employee_id].check_in))todayByEmp[r.employee_id]=r;});
   $('count').textContent=dashboardEmployees.length;
   $('open').textContent=openIds.size;
   $('pendingCount').textContent=pending.length;
@@ -202,23 +198,15 @@ let liveTimer=null;let liveRefreshing=false;function startLiveDashboard(){if(liv
   $('checkedInToday').textContent=Object.keys(todayByEmp).length;
   $('presentToday').textContent=openIds.size;
   $('leftToday').textContent=Object.values(todayByEmp).filter(r=>r.check_out).length;
-  $('onBreak').textContent=breakIds.size;
-  const absentCount=Math.max(0,dashboardEmployees.length-openIds.size-breakIds.size);
-  if($('absentToday')) $('absentToday').textContent=absentCount;
+  $('onBreak').textContent=dashboardBreakIds.size;
+  const absentCount=Math.max(0,dashboardEmployees.length-openIds.size-dashboardBreakIds.size);
+  if($('absentToday'))$('absentToday').textContent=absentCount;
   $('employeeFilter').innerHTML='<option value="">كل الموظفين</option>'+dashboardEmployees.map(e=>'<option value="'+e.id+'">'+esc2(e.full_name)+'</option>').join('');
-  renderRequests();
-  renderLiveBoard();
-  renderDirectory();
-  loadDateDefaults();
-  loadReport(true);
-  renderAttendanceRates();
+  renderRequests();renderLiveBoard();renderDirectory();loadDateDefaults();loadReport(true);renderAttendanceRates();
+  $('liveStatus').textContent='● LIVE • آخر تحديث '+new Date().toLocaleTimeString('ar-EG');
  }catch(e){
-  console.error(e);
-  if($('liveStatus')){
-   $('liveStatus').textContent='● LIVE • البيانات تعذر تحديثها الآن';
-   $('liveStatus').style.background='#4a1d1d';
-   $('liveStatus').style.color='#fca5a5';
-  }
+  console.error('MANAGER_DATA_LOAD_ERROR',e);
+  if($('liveStatus')){$('liveStatus').textContent='● LIVE • تعذر تحميل بيانات الموظفين';$('liveStatus').style.background='#4a1d1d';$('liveStatus').style.color='#fca5a5';}
   throw e;
  }
 }
