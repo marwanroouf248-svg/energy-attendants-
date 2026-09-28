@@ -80,6 +80,6 @@ async function checkOut(){try{if(mode==='break'){return endBreakNow()}await geo(
 const bind=(id,fn)=>{const e=$(id);if(e)e.addEventListener('click',fn)};bind('attendanceModeBtn',attendanceMode);bind('breakModeBtn',breakMode);bind('depsBackBtn',home);bind('breakDepsBackBtn',home);bind('listBackBtn',backFromList);bind('empBackBtn',home);bind('break15Btn',()=>startBreakChoice(15));bind('break30Btn',()=>startBreakChoice(30));bind('breakStart',confirmBreakStart);bind('breakEnd',endBreakNow);bind('in',checkIn);bind('out',checkOut);$('home').querySelector('a')?.setAttribute('href','manager-portal-7f3k9m.html');function backFromList(){if(timer)clearInterval(timer);timer=null;show('list',false);if(mode==='break')show('breakDeps',true);else show('deps',true)};
 window.__energyAttendance=attendanceMode;window.__energyBreak=breakMode;
 })();
-<script>
+</script><script>
 document.addEventListener('DOMContentLoaded',()=>{const a=document.getElementById('attendanceModeBtn'),b=document.getElementById('breakModeBtn');if(a)a.onclick=()=>window.__energyAttendance&&window.__energyAttendance();if(b)b.onclick=()=>window.__energyBreak&&window.__energyBreak();});
 </script></body></html>
