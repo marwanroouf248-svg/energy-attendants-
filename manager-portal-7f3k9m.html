@@ -172,7 +172,7 @@ async function telegramStatus(){try{const j=await api('manager_telegram_status')
     }
   }
 })();;
-let dashboardRows=[],dashboardRequests=[],dashboardEmployees=[],reportRows=[];
+let dashboardRows=[],liveRows=[],dashboardRequests=[],dashboardEmployees=[],reportRows=[];
 function cairoDate(){return new Intl.DateTimeFormat('en-CA',{timeZone:'Africa/Cairo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());}
 function esc2(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
 function scrollToSection(id){document.getElementById(id)?.scrollIntoView({behavior:'smooth'});}
@@ -192,6 +192,9 @@ let liveTimer=null;let liveRefreshing=false;function startLiveDashboard(){if(liv
   const today=cairoDate();
   const allAttendance=sj.attendance||[];
   dashboardRows=allAttendance.filter(r=>new Date(r.check_in).toLocaleDateString('en-CA',{timeZone:'Africa/Cairo'})===today);
+  // Live status must include any still-open attendance even if the shift crossed midnight.
+  // Daily KPIs/reports remain scoped to today's Cairo calendar date.
+  liveRows=allAttendance.filter(r=>!r.check_out || new Date(r.check_in).toLocaleDateString('en-CA',{timeZone:'Africa/Cairo'})===today);
   const openIds=new Set((sj.open||[]).map(x=>x.employee_id));
   const pending=dashboardRequests.filter(x=>x.status==='pending');
   const todayByEmp={};
@@ -228,7 +231,7 @@ function renderRequests(){const p=dashboardRequests.filter(x=>x.status==='pendin
 async function decideRequest(id,decision){if(!confirm(decision==='approve'?'تأكيد اعتماد الطلب؟':'تأكيد رفض الطلب؟'))return;try{const result=await approvalApi('manager_decide',{request_id:id,decision});if(!result||result.ok!==true)throw Error(result?.error||'تعذر تنفيذ القرار');const successMessage=decision==='approve'?'✅ تم اعتماد الطلب وتسجيل الانصراف بنجاح.':'❌ تم رفض طلب الانصراف.';try{await refreshDashboard();}catch(refreshError){console.error('DASHBOARD_REFRESH_AFTER_DECISION_FAILED',refreshError);}alert(successMessage);}catch(e){alert('تعذر تنفيذ القرار: '+(e?.message||e));}}
 function getEmployeeState(e){
  const id=e.id;
- const rows=dashboardRows.filter(r=>r.employee_id===id).sort((a,b)=>new Date(b.check_in)-new Date(a.check_in));
+ const rows=liveRows.filter(r=>r.employee_id===id).sort((a,b)=>new Date(b.check_in)-new Date(a.check_in));
  const latest=rows[0];
  const open=rows.find(r=>!r.check_out);
  const breaks=(typeof dashboardBreaks!=='undefined'?dashboardBreaks:[]).filter(b=>b.employee_id===id && !b.ended_at);
