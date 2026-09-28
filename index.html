@@ -78,5 +78,8 @@ async function endBreakNow(){try{const j=await api({action:'break_end',employee_
 async function checkIn(){try{if(mode==='break'){return} await geo();let b=deviceBound();if(b&&b!==selected.id&&!managerDevice())throw Error('هذا الجهاز مربوط بموظف تاني. استخدم جهاز الموظف نفسه.');await api({action:'check_in',employee_id:selected.id});if(!b&&!managerDevice())localStorage.setItem('bound_employee',selected.id);msg('تم تسجيل الحضور بنجاح');await refresh()}catch(e){msg(e.message)}}
 async function checkOut(){try{if(mode==='break'){return endBreakNow()}await geo();await api({action:'check_out',employee_id:selected.id});msg('تم تسجيل الانصراف بنجاح');await refresh()}catch(e){msg(e.message)}}
 const bind=(id,fn)=>{const e=$(id);if(e)e.addEventListener('click',fn)};bind('attendanceModeBtn',attendanceMode);bind('breakModeBtn',breakMode);bind('depsBackBtn',home);bind('breakDepsBackBtn',home);bind('listBackBtn',backFromList);bind('empBackBtn',home);bind('break15Btn',()=>startBreakChoice(15));bind('break30Btn',()=>startBreakChoice(30));bind('breakStart',confirmBreakStart);bind('breakEnd',endBreakNow);bind('in',checkIn);bind('out',checkOut);$('home').querySelector('a')?.setAttribute('href','manager-portal-7f3k9m.html');function backFromList(){if(timer)clearInterval(timer);timer=null;show('list',false);if(mode==='break')show('breakDeps',true);else show('deps',true)};
+window.__energyAttendance=attendanceMode;window.__energyBreak=breakMode;
 })();
+<script>
+document.addEventListener('DOMContentLoaded',()=>{const a=document.getElementById('attendanceModeBtn'),b=document.getElementById('breakModeBtn');if(a)a.onclick=()=>window.__energyAttendance&&window.__energyAttendance();if(b)b.onclick=()=>window.__energyBreak&&window.__energyBreak();});
 </script></body></html>
