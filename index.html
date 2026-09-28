@@ -36,7 +36,36 @@ async function api(body){const r=await fetch(API,{method:'POST',headers:{'Conten
 async function loadEmployees(){const j=await api({action:'employees'});employees=(j.employees||[]).filter(x=>x.active!==false);return employees}
 function home(){if(timer)clearInterval(timer);timer=null;selected=null;openRec=null;show('home',true);show('deps',false);show('list',false);show('breakDeps',false);show('emp',false);msg('')}
 function attendanceMode(){mode='attendance';branch='';department='';$('bt').textContent='اختار الفرع';show('home',false);show('deps',true);show('list',false);show('breakDeps',false);show('emp',false);renderBranchCards('attendance');msg('')}\nasync function breakMode(){mode='break';branch='';department='';show('home',false);show('deps',false);show('list',false);show('emp',false);show('breakDeps',true);$('breakDepBtns').innerHTML='<p class="muted">جاري التحميل...</p>';try{await loadEmployees();renderBranchCards('break')}catch(e){$('breakDepBtns').innerHTML='<p>'+e.message+'</p>'}}
-function renderBranchCards(kind){const target=kind==='break'?'breakDepBtns':'depBtns';const special='<div class="branch-special"><div class="branch-card special-card" onclick="chooseSpecial(\'Quality\')">🛡️<b>Quality</b><span>الجودة</span></div><div class="branch-card special-card" onclick="chooseSpecial(\'Assessment\')">🩺<b>Assessment</b><span>التقييم الطبي</span></div><div class="branch-card special-card" onclick="chooseSpecial(\'Administration\')">🏢<b>Administration</b><span>الإدارة</span></div></div>';$(target).innerHTML='<div class="branch-grid"><div class="branch-card" onclick="chooseBranch(\'فرع الرخاوي\')">♀️<b>فرع الرخاوي</b><span>Sales · Coach · Outdoor · House keeping · Move</span></div><div class="branch-card" onclick="chooseBranch(\'فرع فودافون\')">♂️<b>فرع فودافون</b><span>Sales · Coach · Outdoor · Quality · House keeping</span></div></div>'+special;}function chooseBranch(b){branch=b;$('bt').textContent=b;const target=mode==='break'?'breakDepBtns':'depBtns';const ds=b==='فرع الرخاوي'?['Sales','Coach','Outdoor','House keeping','Move']:['Sales','Coach','Outdoor','Quality','House keeping'];const icon=b==='فرع الرخاوي'?'♀️':'♂️';$(target).innerHTML='<div class="selected-branch-head">'+icon+' <b>'+b+'</b><span>اختار القسم</span></div>'+ds.map(d=>'<button type="button" class="dept-btn" data-dep="'+d+'">'+d+'</button>').join('')+'<button type="button" class="secondary" onclick="renderBranchCards(\''+(mode==='break'?'break':'attendance')+'\')">تغيير الفرع</button>';document.querySelectorAll('[data-dep]').forEach(x=>x.onclick=()=>showList(b+' - '+x.dataset.dep))}
+function renderBranchCards(kind){
+  const target=kind==='break'?'breakDepBtns':'depBtns';
+  const special='<div class="branch-special">'+
+    '<button type="button" class="branch-card special-card" data-special="Quality">🛡️<b>Quality</b><span>الجودة</span></button>'+
+    '<button type="button" class="branch-card special-card" data-special="Assessment">🩺<b>Assessment</b><span>التقييم الطبي</span></button>'+
+    '<button type="button" class="branch-card special-card" data-special="Administration">🏢<b>Administration</b><span>الإدارة</span></button>'+
+    '</div>';
+  $(target).innerHTML=
+    '<div class="branch-grid">'+
+      '<button type="button" class="branch-card" data-branch="فرع الرخاوي">♀️<b>فرع الرخاوي</b><span>Sales · Coach · Outdoor · House keeping · Move</span></button>'+
+      '<button type="button" class="branch-card" data-branch="فرع فودافون">♂️<b>فرع فودافون</b><span>Sales · Coach · Outdoor · Quality · House keeping</span></button>'+
+    '</div>'+special;
+  document.querySelectorAll('#'+target+' [data-branch]').forEach(x=>x.addEventListener('click',()=>chooseBranch(x.dataset.branch)));
+  document.querySelectorAll('#'+target+' [data-special]').forEach(x=>x.addEventListener('click',()=>chooseSpecial(x.dataset.special)));
+}
+function chooseBranch(b){
+  branch=b;
+  $('bt').textContent=b;
+  const target=mode==='break'?'breakDepBtns':'depBtns';
+  const ds=b==='فرع الرخاوي'
+    ?['Sales','Coach','Outdoor','House keeping','Move']
+    :['Sales','Coach','Outdoor','Quality','House keeping'];
+  const icon=b==='فرع الرخاوي'?'♀️':'♂️';
+  $(target).innerHTML=
+    '<div class="selected-branch-head">'+icon+' <b>'+b+'</b><span>اختار القسم</span></div>'+
+    ds.map(d=>'<button type="button" class="dept-btn" data-dep="'+d+'">'+d+'</button>').join('')+
+    '<button type="button" class="secondary" id="changeBranchBtn">تغيير الفرع</button>';
+  document.querySelectorAll('#'+target+' [data-dep]').forEach(x=>x.addEventListener('click',()=>showList(b+' - '+x.dataset.dep)));
+  $('changeBranchBtn').addEventListener('click',()=>renderBranchCards(mode==='break'?'break':'attendance'));
+}
 function chooseSpecial(s){branch=s;department=s;showList(s)}
 async function showList(label){if(label.startsWith('بريك - '))label=label.slice(7);if(label.startsWith('فرع الرخاوي - ')){branch='فرع الرخاوي';department=label.slice(14)}else if(label.startsWith('فرع فودافون - ')){branch='فرع فودافون';department=label.slice(15)}else{branch=label;department=label}$('dt').textContent=(mode==='break'?'بريك - ':'')+label;show('deps',false);show('breakDeps',false);show('list',true);show('emp',false);try{await loadEmployees();let arr=[];if(branch==='فرع الرخاوي'){let names=GROUPS[branch][department]||[];arr=employees.filter(e=>e.branch===branch&&(e.department===department||names.includes(e.full_name)))}else if(branch==='فرع فودافون'){arr=employees.filter(e=>e.branch===branch&&e.department===department)}else if(department==='Quality')arr=employees.filter(e=>e.full_name==='عمرو زكريا');else if(department==='Assessment')arr=employees.filter(e=>e.full_name==='دكتور محمد ياسين');else if(department==='Administration')arr=employees.filter(e=>['Marwan','ahmed kamal','mohamed ali','Arwa'].includes(e.full_name));$('names').innerHTML=arr.map(e=>'<button type="button" data-emp="'+e.id+'">'+e.full_name+'</button>').join('')||'<p class="muted">لا يوجد موظفون حاليًا</p>';document.querySelectorAll('[data-emp]').forEach(x=>x.onclick=()=>pick(x.dataset.emp))}catch(e){$('names').innerHTML='<p>'+e.message+'</p>'}}
 async function pick(id){selected=employees.find(e=>e.id===id);if(!selected){await loadEmployees();selected=employees.find(e=>e.id===id)}if(!selected){msg('الموظف غير موجود');return}show('list',false);show('emp',true);msg('');await refresh()}
