@@ -17,7 +17,7 @@ input{background:#0f172a;border:2px solid #c9992e;border-radius:10px;color:#fff;
 (() => {
 'use strict';
 const API='https://kfrshaagrcggcjalsjdu.supabase.co/functions/v1/employee-kiosk';
-const BRANCHES={'فرع الرخاوي':{lat:29.964248,lng:32.5560476},'فرع فودافون':{lat:29.9631855,lng:32.5572978},'Quality':{lat:29.9631855,lng:32.5572978},'Assessment':{lat:29.964248,lng:32.5560476}};
+const BRANCHES={'فرع الرخاوي':{lat:29.964248,lng:32.5560476},'فرع فودافون':{lat:29.9631855,lng:32.5572978},'Quality':{lat:29.9631855,lng:32.5572978},'Assessment':{lat:29.9631855,lng:32.5572978}};
 const GROUPS={'فرع الرخاوي':{'Sales':['اروي','جودي','روان','زهور','سارة عادل','سندس','مايفل','يسر'],'Coach':['اسراء امام','اسماء','بسمله','تسنيم','ضحي','مريم حسين','نور','ياسمين'],'Outdoor':['ايمان','بسنت','داليا','ساره','مريم احمد','مريم جمال'],'House keeping':['دعاء','مني','نورا','نوره'],'Move':['ليلي']},'فرع فودافون':{'Sales':['حسام','حسن','عبده','ياسين'],'Coach':['خلف','زياد','عراقي','فوزي','محمد مصطفي'],'Outdoor':[],'Quality':['عمرو زكريا'],'House keeping':['ابراهيم','محمد كرم','مصطفي']}};
 let employees=[],selected=null,branch='',department='',mode='attendance',openRec=null,timer=null,breakMinutes=15,breakSelectedMinutes=null,employeesLoadedAt=0,employeesPromise=null;
 const MOTIVATION={
