@@ -191,7 +191,18 @@ let liveTimer=null;let liveRefreshing=false;function startLiveDashboard(){if(liv
   dashboardBreakIds=new Set(dashboardBreaks.filter(x=>!x.ended_at).map(x=>x.employee_id));
   const today=cairoDate();
   const allAttendance=sj.attendance||[];
-  dashboardRows=allAttendance.filter(r=>new Date(r.check_in).toLocaleDateString('en-CA',{timeZone:'Africa/Cairo'})===today);
+  // A late-midnight attendance record belongs to the new Cairo day when the actual check-in happened in the final 2 minutes before midnight and the attendance row was created shortly after midnight. This prevents the daily KPI from losing employees like Hassan while avoiding counting older shifts merely because their row was written after midnight.
+  const dayStart=new Date(today+'T00:00:00+03:00');
+  const dayEnd=new Date(today+'T23:59:59.999+03:00');
+  const isTodayAttendance=r=>{
+    const checkIn=new Date(r.check_in);
+    if(checkIn>=dayStart&&checkIn<=dayEnd)return true;
+    const createdAt=r.created_at?new Date(r.created_at):null;
+    const midnightGraceStart=new Date(dayStart.getTime()-2*60*1000);
+    const createdGraceEnd=new Date(dayStart.getTime()+15*60*1000);
+    return checkIn>=midnightGraceStart&&checkIn<dayStart&&createdAt&&createdAt>=dayStart&&createdAt<=createdGraceEnd;
+  };
+  dashboardRows=allAttendance.filter(isTodayAttendance);
   // Live status must include any still-open attendance even if the shift crossed midnight.
   // Daily KPIs/reports remain scoped to today's Cairo calendar date.
   liveRows=allAttendance.filter(r=>!r.check_out || new Date(r.check_in).toLocaleDateString('en-CA',{timeZone:'Africa/Cairo'})===today);
