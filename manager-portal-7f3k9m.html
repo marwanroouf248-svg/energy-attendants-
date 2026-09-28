@@ -278,7 +278,21 @@ function renderDirectory(){
    '</div>').join('')+'</div>';
  }).join('')||'<div class="empty">لم يتم تحميل الموظفين.</div>';
  const me=$('manualEmployee');
- if(me){const old=me.value;me.innerHTML='<option value="">اختر الموظف</option>'+dashboardEmployees.map(e=>'<option value="'+e.id+'">'+esc2(e.full_name)+' — '+esc2(e.branch||'')+'</option>').join('');me.value=old;}
+ if(me){
+   const old=me.value;
+   const wasFocused=document.activeElement===me;
+   const next='<option value="">اختر الموظف</option>'+dashboardEmployees.map(e=>'<option value="'+e.id+'">'+esc2(e.full_name)+' — '+esc2(e.branch||'')+'</option>').join('');
+   const signature=dashboardEmployees.map(e=>e.id+':'+e.full_name+':'+(e.branch||'')).join('|');
+   if(me.dataset.optionsSignature!==signature && !wasFocused){
+     const y=window.scrollY;
+     me.innerHTML=next;
+     me.dataset.optionsSignature=signature;
+     if(old && dashboardEmployees.some(e=>e.id===old)) me.value=old;
+     requestAnimationFrame(()=>window.scrollTo({top:y,behavior:'instant'}));
+   } else if(old && me.value!==old && dashboardEmployees.some(e=>e.id===old)){
+     me.value=old;
+   }
+ }
 }
 
 async function manualAction(action){const id=$('manualEmployee').value;if(!id){alert('اختر الموظف أولاً');return}const emp=dashboardEmployees.find(x=>x.id===id);const labels={check_in:'تسجيل حضور',check_out:'تسجيل انصراف',break_start:'بدء بريك',break_end:'إنهاء بريك'};if(!confirm('تأكيد '+labels[action]+' للموظف: '+(emp?.full_name||'')+'؟'))return;try{$('manualActionMsg').textContent='جاري التنفيذ...';if(action==='check_in'||action==='check_out'){await approvalApi('manager_action',{action_type:action,employee_id:id});}else{const location=emp?.branch==='فرع الرخاوي'?{lat:29.964248,lng:32.5560476,accuracy:5,distance:0}:{lat:29.9631855,lng:32.5572978,accuracy:5,distance:0};await api(action==='break_start'?'break_start':'break_end',{employee_id:id,location,allowed_minutes:Number($('manualBreakMinutes').value||15),motivation_message:'تم بواسطة المدير من لوحة المدير'});} $('manualActionMsg').innerHTML='✅ تم '+labels[action]+' لـ '+esc2(emp?.full_name||'الموظف');await refreshDashboard();}catch(e){$('manualActionMsg').innerHTML='❌ '+esc2(e.message)}}
