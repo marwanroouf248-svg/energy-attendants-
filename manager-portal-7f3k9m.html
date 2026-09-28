@@ -58,7 +58,7 @@ function storeManagerSession(j){
   if(refreshToken)localStorage.setItem('energy_manager_refresh_token',refreshToken);
 }
 async function directManagerLogin(email,password){
-  const j=await fetchJson(F,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'login',email,password})});
+  const j=await fetchJson(F,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'manager_login',email,password})});
   const session=j?.session||j?.data?.session;
   if(!session?.access_token) throw Error(j?.error||'تعذر إنشاء جلسة المدير');
   storeManagerSession(session);
