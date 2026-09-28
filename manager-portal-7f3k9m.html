@@ -96,16 +96,20 @@ async function login(){
   }finally{if(btn){btn.disabled=false;btn.textContent='دخول المدير';}}
 }
 async function show(){
+  // Authentication success must open the manager UI immediately.
+  // Dashboard/API failures are shown inside the dashboard instead of locking the manager out.
+  $('login').classList.add('hidden');
+  $('dash').classList.remove('hidden');
   try{
-    await api('manager_summary');
-    $('login').classList.add('hidden');$('dash').classList.remove('hidden');
-    await refreshDashboard();startLiveDashboard();
+    await refreshDashboard();
+    startLiveDashboard();
+    startManagerNotifications();
   }catch(e){
     console.error('MANAGER_DASHBOARD_ERROR',e);
-    $('dash').classList.add('hidden');$('login').classList.remove('hidden');
-    token='';refreshToken='';
-    localStorage.removeItem('energy_manager_token');localStorage.removeItem('energy_manager_refresh_token');
-    throw Error(e?.message||'تعذر التحقق من صلاحية المدير');
+    const live=$('liveStatus');
+    if(live){live.textContent='● تعذر تحميل البيانات';live.className='error';}
+    const msg=$('managerError')||$('msg');
+    if(msg)msg.textContent='تم تسجيل الدخول، لكن تعذر تحميل بيانات لوحة المدير: '+(e?.message||'خطأ غير معروف');
   }
 }
 function logout(){token='';refreshToken='';localStorage.removeItem('energy_manager_token');localStorage.removeItem('energy_manager_refresh_token');location.reload()}
