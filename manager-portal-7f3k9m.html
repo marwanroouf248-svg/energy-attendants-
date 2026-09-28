@@ -58,12 +58,10 @@ function storeManagerSession(j){
   if(refreshToken)localStorage.setItem('energy_manager_refresh_token',refreshToken);
 }
 async function directManagerLogin(email,password){
-  const j=await fetchJson(SUPABASE_URL+'/auth/v1/token?grant_type=password',{
-    method:'POST',
-    headers:{'Content-Type':'application/json','apikey':SUPABASE_PUBLISHABLE_KEY},
-    body:JSON.stringify({email,password})
-  });
-  storeManagerSession(j);
+  const j=await fetchJson(F,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'login',email,password})});
+  const session=j?.session||j?.data?.session;
+  if(!session?.access_token) throw Error(j?.error||'تعذر إنشاء جلسة المدير');
+  storeManagerSession(session);
   return j;
 }
 async function refreshManagerSession(){
