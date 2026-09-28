@@ -277,20 +277,22 @@ function renderLiveBoard(){
 function renderDirectory(){
  const opts='<option value="">كل الموظفين</option>'+dashboardEmployees.map(e=>'<option value="'+e.id+'">'+esc2(e.full_name)+'</option>').join('');
  ['detailEmployee','reqEmployee','breakEmployee'].forEach(id=>{const el=$(id);if(el){const oldv=el.value;el.innerHTML=opts;el.value=oldv}});
- const groups={};
+ const groups={},external={};
  dashboardEmployees.forEach(e=>{
-  const b=e.branch||'غير محدد',d=e.department||'غير محدد';
-  (groups[b]??={});(groups[b][d]??=[]).push(e);
+  const d=e.department||'غير محدد';
+  if(!e.branch){(external[d]??=[]).push(e);return;}
+  (groups[e.branch]??={});(groups[e.branch][d]??=[]).push(e);
  });
- $('employees').innerHTML=Object.entries(groups).map(([b,deps])=>{
+ const renderPeople=(list)=>list.map(e=>{const s=getEmployeeState(e);return '<div class="directory-card" onclick="selectEmployeeDetail(this.dataset.employeeId)" data-employee-id="'+e.id+'" style="cursor:pointer"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><div><b>'+esc2(e.full_name)+'</b><small>'+esc2(e.branch||'قسم مستقل')+' · '+esc2(e.department||'—')+'</small></div><span class="status-pill '+s.className+'">'+esc2(s.label)+'</span></div><small>'+esc2(s.detail||'')+'</small></div>'}).join('');
+ const branchHtml=Object.entries(groups).map(([b,deps])=>{
   const all=Object.values(deps).flat();
   const counts={present:0,break:0,left:0,absent:0,pending:0};
   all.forEach(e=>{const s=getEmployeeState(e);if(s.key==='break')counts.break++;else if(s.key==='left')counts.left++;else if(s.key==='absent')counts.absent++;else if(s.key.startsWith('pending'))counts.pending++;else counts.present++;});
   return '<div class="branch-group"><div class="branch-title">🏢 '+esc2(b)+' <span>'+all.length+' موظف · موجود '+counts.present+' · بريك '+counts.break+' · انصرف '+counts.left+' · غير مسجل '+counts.absent+' · طلبات '+counts.pending+'</span></div>'+
-   Object.entries(deps).map(([d,list])=>'<div class="department-group"><h4>💼 '+esc2(d)+' <span>'+list.length+'</span></h4>'+
-   list.map(e=>{const s=getEmployeeState(e);return '<div class="directory-card" onclick="selectEmployeeDetail(this.dataset.employeeId)" data-employee-id="'+e.id+'" style="cursor:pointer"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><div><b>'+esc2(e.full_name)+'</b><small>'+esc2(e.branch||'—')+' · '+esc2(e.department||'—')+'</small></div><span class="status-pill '+s.className+'">'+esc2(s.label)+'</span></div><small>'+esc2(s.detail||'')+'</small></div>'}).join('')+
-   '</div>').join('')+'</div>';
- }).join('')||'<div class="empty">لم يتم تحميل الموظفين.</div>';
+   Object.entries(deps).map(([d,list])=>'<div class="department-group"><h4>💼 '+esc2(d)+' <span>'+list.length+'</span></h4>'+renderPeople(list)+'</div>').join('')+'</div>';
+ }).join('');
+ const externalHtml=Object.entries(external).map(([d,list])=>'<div class="department-group"><h4>🏷️ '+esc2(d)+' <span>'+list.length+'</span></h4>'+renderPeople(list)+'</div>').join('');
+ $('employees').innerHTML=branchHtml+(externalHtml?'<div class="branch-group"><div class="branch-title">🗂️ أقسام خارج الفروع <span>'+Object.values(external).flat().length+' موظف</span></div>'+externalHtml+'</div>':'')||'<div class="empty">لم يتم تحميل الموظفين.</div>';
  const me=$('manualEmployee');
  if(me){
    const old=me.value;
