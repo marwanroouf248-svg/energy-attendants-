@@ -69,9 +69,9 @@ function chooseBranch(b){
   branch=b;
   $('bt').textContent=b;
   const target=mode==='break'?'breakDepBtns':'depBtns';
-  const ds=b==='فرع الرخاوي'
-    ?['Sales','Coach','Outdoor','House keeping','Move']
-    :['Sales','Coach','Outdoor','Quality','House keeping'];
+  const fallback=b==='فرع الرخاوي'?['Sales','Coach','Outdoor','House keeping','Move']:['Sales','Coach','Outdoor','Quality','House keeping'];
+  const dbDepartments=[...new Set(employees.filter(e=>e.active!==false&&e.branch===b&&e.department).map(e=>e.department))];
+  const ds=[...new Set([...dbDepartments,...fallback])];
   const icon=b==='فرع الرخاوي'?'♀️':'♂️';
   $(target).innerHTML=
     '<div class="selected-branch-head">'+icon+' <b>'+b+'</b><span>اختار القسم</span></div>'+
