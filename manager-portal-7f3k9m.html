@@ -57,7 +57,7 @@ button{border:0;border-radius:14px;padding:13px 17px;color:#fff;background:#172a
 .ep-live-chip span{display:block;color:#7f94a9;font-size:10px}.ep-live-chip b{display:block;font-size:19px;margin-top:3px}
 @media(max-width:900px){.manager-shell{padding-right:0!important}.ep-section-nav{right:10px;left:10px;top:76px;max-width:none}.manager-header{padding-top:55px!important}.ep-live-strip{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:650px){.icon-rail{right:8px!important}.ep-section-nav{top:68px}.manager-header:after{left:12px;bottom:8px}.ep-live-strip{grid-template-columns:repeat(2,1fr)}.report-controls{display:grid;grid-template-columns:1fr}.report-controls input,.report-controls select,.report-controls button{width:100%;min-width:0}}
-</style></style><style id="manager-layout-fix">
+</style><style id="manager-layout-fix">
 html,body{overflow-x:hidden}
 body{min-height:100vh}
 .manager-shell{width:100%;box-sizing:border-box}
@@ -481,21 +481,21 @@ const _oldShow=show;show=async function(){await _oldShow();setTimeout(hrLoad,500
 document.addEventListener('change',e=>{if(e.target?.id==='hrAccountEmployee')hrRenderAccountInfo()});
 </script><script id="energy-manager-v2-js">
 (function(){
-function epBindNav(){
- document.querySelectorAll('.ep-section-nav button').forEach(b=>b.addEventListener('click',()=>{
-  const id=b.dataset.target,el=document.getElementById(id);
-  if(el)el.scrollIntoView({behavior:'smooth',block:'start'});
-  document.querySelectorAll('.ep-section-nav button').forEach(x=>x.classList.remove('active'));b.classList.add('active');
- }));
-}
-function epSync(){
- const vals={epPresentNow:document.getElementById('presentCount')?.textContent||'0',epBreakNow:document.getElementById('onBreak')?.textContent||'0',epLeftNow:document.getElementById('leftCount')?.textContent||'0',epPendingNow:document.getElementById('pendingCount')?.textContent||'0'};
- Object.entries(vals).forEach(([id,v])=>{const e=document.getElementById(id);if(e)e.textContent=v});
-}
-function epWatch(){
- epSync(); setInterval(epSync,1500);
- const obs=new MutationObserver(epSync);obs.observe(document.body,{subtree:true,childList:true,characterData:true});
-}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{epBindNav();epWatch()});else{epBindNav();epWatch()}
+ function epBindNav(){
+  document.querySelectorAll('.ep-section-nav button').forEach(b=>b.addEventListener('click',function(){
+   const el=document.getElementById(b.dataset.target);
+   if(el)el.scrollIntoView({behavior:'auto',block:'start'});
+   document.querySelectorAll('.ep-section-nav button').forEach(x=>x.classList.remove('active'));
+   b.classList.add('active');
+  }));
+ }
+ function epSync(){
+  const vals={epPresentNow:document.getElementById('presentCount')?.textContent||'0',epBreakNow:document.getElementById('onBreak')?.textContent||'0',epLeftNow:document.getElementById('leftCount')?.textContent||'0',epPendingNow:document.getElementById('pendingCount')?.textContent||'0'};
+  Object.entries(vals).forEach(([id,v])=>{const e=document.getElementById(id);if(e&&e.textContent!==v)e.textContent=v});
+ }
+ function start(){
+  epBindNav(); epSync(); setInterval(epSync,3000);
+ }
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
 })();
 </script></body></html>
