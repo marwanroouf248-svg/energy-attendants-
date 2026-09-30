@@ -1,12 +1,12 @@
 <!doctype html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Energy Plus - Dashboard</title><style>
 :root{--bg:#07111f;--panel:#0d1a2b;--panel2:#101f33;--line:#1d344d;--gold:#e7bd57;--gold2:#9d7022;--text:#f5f7fb;--muted:#8fa3b8;--green:#42d392;--red:#ff6b6b;--orange:#ffbd5a;--blue:#62a8ff}
-*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:radial-gradient(circle at 85% -10%,#19314c 0,#07111f 38%,#050b13 100%);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text",Arial,sans-serif;min-height:100vh}
+*{box-sizing:border-box}html{scroll-behavior:auto}body{margin:0;background:radial-gradient(circle at 85% -10%,#19314c 0,#07111f 38%,#050b13 100%);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text",Arial,sans-serif;min-height:100vh}
 button,input,select{font:inherit}button{cursor:pointer}
 main{max-width:1500px;margin:auto;padding:24px 28px 70px}
 .hidden{display:none!important}.muted{color:var(--muted)}.error{color:#ff8b8b}.total{color:var(--green);font-weight:800}
 .card,.panel{background:linear-gradient(145deg,rgba(16,31,51,.94),rgba(8,19,32,.96));border:1px solid var(--line);border-radius:24px;box-shadow:0 24px 70px #0005;backdrop-filter:blur(18px)}
 #login{min-height:calc(100vh - 100px);display:grid;place-items:center}.card{padding:34px}
-#login .card{width:min(440px,100%);text-align:center}.logo{width:78px;height:78px;object-fit:contain;display:block;margin:0 auto 18px}
+#login .card{width:min(440px,100%);text-align:center;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;transform:none!important;transition:none!important;box-shadow:0 12px 35px #0008}.logo{width:78px;height:78px;object-fit:contain;display:block;margin:0 auto 18px}
 #login h1{font-size:30px;margin:0 0 5px;color:#fff}#login p{color:var(--muted);margin:0 0 25px}
 input,select{width:100%;padding:14px 15px;margin:7px 0;background:#081525;border:1px solid #28415c;border-radius:14px;color:#fff;outline:none}input:focus,select:focus{border-color:var(--gold);box-shadow:0 0 0 3px #e7bd5718}
 button{border:0;border-radius:14px;padding:13px 17px;color:#fff;background:#172a40;transition:.18s}button:hover{transform:translateY(-1px);filter:brightness(1.08)}button:disabled{opacity:.55;cursor:not-allowed;transform:none}
