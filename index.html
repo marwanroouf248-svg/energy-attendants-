@@ -45,8 +45,28 @@ const MOTIVATION={
 };
 function motivationFor(name){if(MOTIVATION[name])return MOTIVATION[name];let e=employees.find(x=>x.full_name===name)||selected;if(e?.branch==='فرع فودافون')return 'خد بريكك بوعي ☕ اشحن طاقتك، ارجع ركّز، وخلّي باقي يومك أقوى من أوله 💪🔥';return 'خدي بريكك بوعي ☕ اشحني طاقتك، ارجعي ركّزي، وخلّي باقي يومك أقوى من أوله 💪✨'}
 const $=id=>document.getElementById(id),show=(id,on)=>{const e=$(id);if(e)e.classList.toggle('hidden',!on)},msg=t=>{if($('msg'))$('msg').textContent=t||''},fmt=ms=>{let s=Math.max(0,Math.floor(ms/1000)),h=Math.floor(s/3600),m=Math.floor(s%3600/60),q=s%60;return[h,m,q].map(x=>String(x).padStart(2,'0')).join(':')};
-async function api(body){const r=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_PUBLISHABLE_KEY,'Authorization':'Bearer '+SUPABASE_PUBLISHABLE_KEY},body:JSON.stringify(body)});let j={};try{j=await r.json()}catch(_){}if(!r.ok)throw Error(j.error||'تعذر الاتصال بالنظام');return j} async function approvalApi(body){const r=await fetch(APPROVAL_API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});let j={};try{j=await r.json()}catch(_){}if(!r.ok)throw Error(j.error||'تعذر إرسال طلب الموافقة');return j}
-async function loadEmployees(force=false){const now=Date.now();if(!force&&employees.length&&now-employeesLoadedAt<60000)return employees;if(employeesPromise)return employeesPromise;employees=STATIC_EMPLOYEES.filter(x=>x.active!==false);employeesLoadedAt=Date.now();employeesPromise=Promise.race([api({action:'employees'}),new Promise((_,rej)=>setTimeout(()=>rej(Error('directory-timeout')),5000))]).then(j=>{const live=(j.employees||[]).filter(x=>x.active!==false);if(live.length)employees=live;employeesLoadedAt=Date.now();return employees}).catch(()=>employees).finally(()=>{employeesPromise=null});return employeesPromise}
+async function api(body){const r=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_PUBLISHABLE_KEY,'Authorization':'Bearer '+SUPABASE_PUBLISHABLE_KEY},body:JSON.stringify(body)});let j={};try{j=await r.json()}catch(_){}if(!r.ok)throw Error(j.error||'تعذر الاتصال بالنظام');return j} async function approvalApi(body){const r=await fetch(APPROVAL_API,{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_PUBLISHABLE_KEY,'Authorization':'Bearer '+SUPABASE_PUBLISHABLE_KEY},body:JSON.stringify(body)});let j={};try{j=await r.json()}catch(_){}if(!r.ok)throw Error(j.error||'تعذر إرسال طلب الموافقة');return j}
+async function loadEmployees(force=false){
+  const now=Date.now();
+  if(!force&&employees.length&&now-employeesLoadedAt<300000)return employees;
+  if(employeesPromise)return employeesPromise;
+  // Always render the known active directory immediately; refresh live data in the background.
+  if(!employees.length)employees=STATIC_EMPLOYEES.filter(x=>x.active!==false);
+  employeesLoadedAt=now;
+  employeesPromise=(async()=>{
+    try{
+      const j=await Promise.race([
+        api({action:'employees'}),
+        new Promise((_,rej)=>setTimeout(()=>rej(Error('directory-timeout')),2500))
+      ]);
+      const live=(j?.employees||[]).filter(x=>x.active!==false);
+      if(live.length)employees=live;
+    }catch(_){}
+    employeesLoadedAt=Date.now();
+    return employees;
+  })().finally(()=>{employeesPromise=null});
+  return employees;
+}
 function home(){if(timer)clearInterval(timer);timer=null;if(approvalPoll)clearInterval(approvalPoll);approvalPoll=null;selected=null;openRec=null;show('home',true);show('deps',false);show('list',false);show('breakDeps',false);show('emp',false);msg('')}
 function attendanceMode(){mode='attendance';branch='';department='';$('bt').textContent='اختار الفرع';show('home',false);show('deps',true);show('list',false);show('breakDeps',false);show('emp',false);renderBranchCards('attendance');msg('')}
 async function breakMode(){mode='break';branch='';department='';show('home',false);show('deps',false);show('list',false);show('emp',false);show('breakDeps',true);$('breakDepBtns').innerHTML='<p class="muted">جاري التحميل...</p>';try{await loadEmployees();renderBranchCards('break')}catch(e){$('breakDepBtns').innerHTML='<p>'+e.message+'</p>'}}
