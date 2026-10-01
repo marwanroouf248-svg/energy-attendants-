@@ -79,37 +79,16 @@ function storeManagerSession(j){
   if(token)localStorage.setItem('energy_manager_token',token);else localStorage.removeItem('energy_manager_token');
   if(refreshToken)localStorage.setItem('energy_manager_refresh_token',refreshToken);
 }
-async function restoreManagerSession(){const saved=localStorage.getItem('energy_manager_token')||'';const rt=localStorage.getItem('energy_manager_refresh_token')||'';if(!saved)return false;token=saved;refreshToken=rt;try{await api('manager_summary',{},false);return true}catch(_){if(await refreshManagerSession()){try{await api('manager_summary',{},false);return true}catch(__){}}token='';refreshToken='';localStorage.removeItem('energy_manager_token');localStorage.removeItem('energy_manager_refresh_token');return false}}
+async function restoreManagerSession(){const saved=localStorage.getItem('energy_manager_token')||'';const rt=localStorage.getItem('energy_manager_refresh_token')||'';if(!saved)return false;token=saved;refreshToken=rt;return true}
 async function directManagerLogin(email,password){
-  // Primary path: custom manager_login function.
-  try{
-    const j=await fetchJson(F,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'manager_login',email,password})});
-    const session=j?.session||j?.data?.session;
-    if(session?.access_token){storeManagerSession(session);return j;}
-    if(j?.error) throw Error(j.error);
-  }catch(primaryError){
-    // Fallback: authenticate directly with Supabase Auth, then let manager_summary
-    // validate the role. This avoids a transient Edge Function auth failure
-    // blocking the whole manager portal.
-    try{
-      const j=await fetchJson(SUPABASE_URL+'/auth/v1/token?grant_type=password',{
-        method:'POST',
-        headers:{'Content-Type':'application/json','apikey':SUPABASE_PUBLISHABLE_KEY},
-        body:JSON.stringify({email,password})
-      });
-      if(j?.access_token){
-        storeManagerSession(j);
-        await api('manager_summary');
-        return {session:j};
-      }
-    }catch(fallbackError){
-      const a=String(primaryError?.message||'');
-      const b=String(fallbackError?.message||'');
-      if(b) throw Error(b);
-      if(a) throw Error(a);
-    }
-    throw primaryError;
-  }
+  const j=await fetchJson(SUPABASE_URL+'/auth/v1/token?grant_type=password',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','apikey':SUPABASE_PUBLISHABLE_KEY},
+    body:JSON.stringify({email,password})
+  });
+  if(!j?.access_token) throw Error(j?.error_description||j?.error||'تعذر تسجيل دخول المدير');
+  storeManagerSession(j);
+  return {session:j};
 }
 async function refreshManagerSession(){
   const rt=refreshToken||localStorage.getItem('energy_manager_refresh_token')||'';
@@ -184,8 +163,9 @@ let liveTimer=null;let liveRefreshing=false;function startLiveDashboard(){if(liv
     to:$('to')?.value||'',
     employee:$('employeeFilter')?.value||''
   };
-  const sj=await api('manager_summary');
-  dashboardEmployees=sj.employees||[];
+  let sj={};
+  dashboardEmployees=STATIC_EMPLOYEES.filter(x=>x.active!==false);
+  try{sj=await Promise.race([api('manager_summary'),new Promise((_,rej)=>setTimeout(()=>rej(Error('summary-timeout')),7000))]);if(Array.isArray(sj.employees)&&sj.employees.length)dashboardEmployees=sj.employees.filter(x=>x.active!==false)}catch(summaryError){console.warn('MANAGER_SUMMARY_FALLBACK',summaryError)}
   dashboardRequests=sj.requests||[];
   dashboardBreaks=sj.breaks||[];
   dashboardBreakIds=new Set(dashboardBreaks.filter(x=>!x.ended_at).map(x=>x.employee_id));
@@ -333,5 +313,5 @@ function notifyManager(title,body,key){if(key&&notifSeen[key])return;if(key)noti
 async function pollManagerNotifications(prev){try{const today=cairoDate(),data=await Promise.all([api('manager_summary'),approvalApi('manager_requests',{from:today,to:today}),api('manager_report',{from:today,to:today})]),sj=data[0],rq=data[1],rr=data[2],br=sj.breaks||[],cur={attendance:new Set((rr.rows||[]).map(r=>r.id||[r.employee_id,r.check_in,r.check_out].join('|'))),breaks:new Set(br.map(r=>r.id||[r.employee_id,r.started_at,r.ended_at].join('|'))),requests:new Set((rq.requests||[]).filter(r=>r.status==='pending').map(r=>r.id))};if(!prev)return cur;for(const r of rr.rows||[]){const k=r.id||[r.employee_id,r.check_in,r.check_out].join('|');if(!prev.attendance.has(k))notifyManager(r.check_out?'🚪 تسجيل انصراف جديد':'🟢 تسجيل حضور جديد',(r.profiles?.full_name||'موظف')+' • '+(r.profiles?.branch||''),'att-'+k)}for(const b of br){const k=b.id||[b.employee_id,b.started_at,b.ended_at].join('|');if(!prev.breaks.has(k))notifyManager('☕ بريك جديد',(b.profiles?.full_name||'موظف')+' • '+(b.allowed_minutes||15)+' دقيقة','break-'+k)}for(const q of rq.requests||[]){if(q.status==='pending'&&!prev.requests.has(q.id))notifyManager('⏳ طلب جديد للموافقة',(q.profiles?.full_name||'موظف')+' • '+(q.request_type==='check_in'?'حضور':'انصراف'),'req-'+q.id)}return cur}catch(_){return prev}}
 let managerNotifTimer=null;function startManagerNotifications(){if(managerNotifTimer||!token||!$('dash')||$('dash').classList.contains('hidden'))return;let prev=null;managerNotifTimer=setInterval(async()=>{if(document.hidden||!token)return;prev=await pollManagerNotifications(prev)},5000);setTimeout(async()=>{if(token)prev=await pollManagerNotifications(null)},1200);}
 if(localStorage.getItem('energy_notifications_enabled')==='1'&&'Notification' in window&&Notification.permission==='granted'&&$('enableNotificationsBtn'))$('enableNotificationsBtn').textContent='🔔 التنبيهات مفعلة';
-(async()=>{if(!token&&await restoreManagerSession()){await show()}})();
+(async()=>{if(token){const ok=await restoreManagerSession();if(ok)await show();}})();
 if(token)setTimeout(startManagerNotifications,1500);updateNotifUI();</script></body></html>
