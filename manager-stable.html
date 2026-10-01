@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#07111f">
+<title>Energy Plus — Manager</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#07111f;color:#f5f7fb;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",Arial,sans-serif}
+main{max-width:1200px;margin:auto;padding:18px}.hidden{display:none!important}.card{background:#0d1a2b;border:1px solid #203850;border-radius:20px;padding:18px;margin:12px 0}
+h1{margin:0 0 6px;color:#e7bd57}h2{margin:0 0 12px;font-size:18px}.muted{color:#8fa3b8}
+input,select,button{font:inherit;border-radius:12px;padding:12px}input,select{width:100%;background:#081525;color:#fff;border:1px solid #29435d;margin:6px 0}
+button{border:0;background:#172a40;color:#fff;cursor:pointer}button.primary{background:linear-gradient(135deg,#edcf73,#a97822);color:#111;font-weight:900}
+button.success{background:#123f31;color:#68e4aa}button.danger{background:#461d25;color:#ff8c96}
+.login{max-width:430px;margin:10vh auto;text-align:center}.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.kpi{background:#091728;border:1px solid #203850;border-radius:16px;padding:14px}.kpi b{display:block;font-size:30px;margin-top:5px}.toolbar{display:flex;gap:8px;flex-wrap:wrap}.toolbar button{width:auto}.grid{display:grid;grid-template-columns:1.4fr .8fr;gap:12px}.employee-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}.emp{background:#091728;border:1px solid #203850;border-radius:14px;padding:12px}.emp b{display:block}.emp small{display:block;color:#8297ac;margin-top:5px}.pill{display:inline-block;margin-top:8px;padding:4px 8px;border-radius:99px;font-size:11px;background:#172638}.present{background:#12382a;color:#65e0a2}.absent{background:#3f2026;color:#ff909a}.pending{background:#493613;color:#f4d06c}.request{border-top:1px solid #203850;padding:12px 0}.request:first-child{border-top:0}.actions{display:flex;gap:7px;margin-top:8px}.actions button{flex:1}.status{min-height:22px;margin-top:8px}.top{display:flex;justify-content:space-between;align-items:center;gap:10px}@media(max-width:800px){.kpis{grid-template-columns:1fr 1fr}.grid{grid-template-columns:1fr}.employee-grid{grid-template-columns:1fr 1fr}}@media(max-width:500px){main{padding:10px}.employee-grid{grid-template-columns:1fr}.top{align-items:flex-start;flex-direction:column}}
+</style>
+</head>
+<body>
+<main>
+<section id="login" class="card login">
+<h1>Energy Plus</h1><p class="muted">لوحة إدارة الحضور</p>
+<input id="email" type="email" autocomplete="username" placeholder="البريد الإلكتروني">
+<input id="password" type="password" autocomplete="current-password" placeholder="كلمة المرور">
+<button id="loginBtn" class="primary" type="button">دخول المدير</button>
+<div id="loginMsg" class="status muted"></div>
+</section>
+<section id="app" class="hidden">
+<div class="card top"><div><h1>لوحة المدير</h1><div id="last" class="muted">جاري التحميل...</div></div><div class="toolbar"><button id="refreshBtn" type="button">تحديث</button><button id="logoutBtn" class="danger" type="button">خروج</button></div></div>
+<div class="kpis">
+<div class="kpi"><span class="muted">كل الموظفين</span><b id="count">0</b></div>
+<div class="kpi"><span class="muted">حاضر الآن</span><b id="present">0</b></div>
+<div class="kpi"><span class="muted">انصرف</span><b id="left">0</b></div>
+<div class="kpi"><span class="muted">طلبات معلقة</span><b id="pending">0</b></div>
+</div>
+<div class="grid">
+<div class="card"><h2>الموظفون</h2><input id="search" placeholder="بحث بالاسم أو الفرع أو القسم"><div id="employees" class="employee-grid"><div class="muted">جاري التحميل...</div></div></div>
+<div>
+<div class="card"><h2>طلبات الحضور والانصراف</h2><div id="requests" class="muted">جاري التحميل...</div></div>
+<div class="card"><h2>تسجيل يدوي</h2><select id="manual"><option value="">اختر الموظف</option></select><div class="actions"><button id="manualIn" class="success" type="button">تسجيل حضور</button><button id="manualOut" class="danger" type="button">تسجيل انصراف</button></div><div id="manualMsg" class="status"></div></div>
+</div>
+</div>
+</section>
+</main>
+<script>
+(()=>{'use strict';
+const URL='https://kfrshaagrcggcjalsjdu.supabase.co';
+const KEY=['sb_publishable_mKftrB-','itebmeA-bdtt6dw_Q3QnxH0_'].join('');
+const F=URL+'/functions/v1/employee-kiosk',A=URL+'/functions/v1/attendance-approval';
+let token=localStorage.getItem('energy_manager_token')||'',refreshToken=localStorage.getItem('energy_manager_refresh_token')||'',employees=[],summary={};
+const $=id=>document.getElementById(id);
+async function json(url,opt={},ms=10000){const c=new AbortController(),t=setTimeout(()=>c.abort(),ms);try{const r=await fetch(url,{...opt,signal:c.signal});const tx=await r.text();let j={};try{j=tx?JSON.parse(tx):{}}catch(_){j={error:tx||'استجابة غير مفهومة'}}if(!r.ok)throw Error(j.error||j.message||('HTTP '+r.status));return j}catch(e){if(e.name==='AbortError')throw Error('انتهت مهلة الاتصال');throw e}finally{clearTimeout(t)}}
+async function auth(){const j=await json(URL+'/auth/v1/token?grant_type=password',{method:'POST',headers:{'Content-Type':'application/json','apikey':KEY},body:JSON.stringify({email:$('email').value.trim(),password:$('password').value})});if(!j.access_token)throw Error(j.error_description||j.error||'تعذر تسجيل الدخول');token=j.access_token;refreshToken=j.refresh_token||'';localStorage.setItem('energy_manager_token',token);if(refreshToken)localStorage.setItem('energy_manager_refresh_token',refreshToken)}
+async function api(action,body={}){return json(F,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token,'apikey':KEY},body:JSON.stringify({action,...body})})}
+async function approval(action,body={}){return json(A,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({action,...body})})}
+async function loadEmployees(){const j=await json(URL+'/rest/v1/profiles?select=id,full_name,active,branch,department,employee_code&role=eq.employee&active=eq.true&order=full_name.asc',{headers:{apikey:KEY,Authorization:'Bearer '+token}});return Array.isArray(j)?j:[]}
+function state(e){const rows=(summary.attendance||[]).filter(r=>r.employee_id===e.id).sort((a,b)=>new Date(b.check_in)-new Date(a.check_in));const open=rows.find(r=>!r.check_out);if(open)return ['present','موجود الآن'];if(rows[0])return ['absent','انصرف'];return ['absent','غير مسجل']}
+function render(){const q=($('search').value||'').trim().toLowerCase();const list=employees.filter(e=>(e.full_name+' '+(e.branch||'')+' '+(e.department||'')).toLowerCase().includes(q));$('count').textContent=employees.length;const present=employees.filter(e=>state(e)[0]==='present').length;$('present').textContent=present;$('left').textContent=Math.max(0,employees.length-present);const req=(summary.requests||[]).filter(r=>r.status==='pending');$('pending').textContent=req.length;$('employees').innerHTML=list.map(e=>{const s=state(e);return '<div class="emp"><b>'+esc(e.full_name)+'</b><small>'+esc(e.branch||'قسم مستقل')+' · '+esc(e.department||'—')+'</small><span class="pill '+s[0]+'">'+s[1]+'</span></div>'}).join('')||'<div class="muted">لا يوجد موظفون</div>';$('manual').innerHTML='<option value="">اختر الموظف</option>'+employees.map(e=>'<option value="'+e.id+'">'+esc(e.full_name)+' — '+esc(e.branch||'')+'</option>').join('');$('requests').innerHTML=req.map(r=>'<div class="request"><b>'+esc(r.profiles?.full_name||'موظف')+'</b><div class="muted">'+(r.request_type==='check_in'?'🟢 حضور':'🔴 انصراف')+' · '+esc(r.profiles?.branch||'')+' · '+new Date(r.requested_at).toLocaleString('ar-EG')+'</div><div class="actions"><button class="success" onclick="window.decide(\''+r.id+'\',\'approve\')">موافقة</button><button class="danger" onclick="window.decide(\''+r.id+'\',\'reject\')">رفض</button></div></div>').join('')||'<div class="muted">لا توجد طلبات معلقة</div>'}
+function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+async function refresh(){try{summary=await api('manager_summary');employees=await loadEmployees();render();$('last').textContent='آخر تحديث '+new Date().toLocaleTimeString('ar-EG')}catch(e){$('last').textContent='تعذر تحميل البيانات: '+e.message}}
+window.decide=async(id,d)=>{try{await approval('manager_decide',{request_id:id,decision:d});await refresh()}catch(e){alert(e.message)}};
+async function manual(type){const id=$('manual').value;if(!id)return $('manualMsg').textContent='اختر الموظف أولاً';try{const j=await approval('manager_action',{action_type:type,employee_id:id});$('manualMsg').textContent=j.ok?'تم التنفيذ ✅':(j.error||'تعذر التنفيذ');await refresh()}catch(e){$('manualMsg').textContent=e.message}}
+async function openApp(){ $('login').classList.add('hidden');$('app').classList.remove('hidden');await refresh();setInterval(()=>{if(!document.hidden)refresh()},15000)}
+$('loginBtn').onclick=async()=>{const b=$('loginBtn');try{b.disabled=true;$('loginMsg').textContent='جاري تسجيل الدخول...';await auth();await openApp()}catch(e){$('loginMsg').textContent=e.message}finally{b.disabled=false}};
+$('refreshBtn').onclick=refresh;$('search').oninput=render;$('logoutBtn').onclick=()=>{localStorage.removeItem('energy_manager_token');localStorage.removeItem('energy_manager_refresh_token');location.reload()};$('manualIn').onclick=()=>manual('check_in');$('manualOut').onclick=()=>manual('check_out');
+if(token)openApp().catch(()=>{token='';localStorage.removeItem('energy_manager_token')});
+})();
+</script>
+</body></html>
