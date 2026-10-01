@@ -22,7 +22,7 @@
   "rewrites": [
     {
       "source": "/manager",
-      "destination": "/manager-stable.html"
+      "destination": "/manager-portal-7f3k9m.html"
     }
   ]
 }
