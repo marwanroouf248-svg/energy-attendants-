@@ -167,11 +167,11 @@ let liveTimer=null;let liveRefreshing=false;function startLiveDashboard(){if(liv
     if(Array.isArray(directEmployees)&&directEmployees.length)dashboardEmployees=directEmployees;
   }catch(e){console.warn('DIRECT_EMPLOYEE_LOAD_FAILED',e);}
   try{
-    const directAttendance=await restGet('attendance',{select:'id,employee_id,check_in,check_out,created_at,device_name,device_id',check_in:'gte.'+today+'T00:00:00+03:00',check_in:'lt.'+tomorrow+'T00:00:00+03:00',order:'check_in.desc'});
+    const directAttendance=await restGet('attendance',{select:'id,employee_id,check_in,check_out,created_at,device_name,device_id',and:'(check_in.gte.'+today+'T00:00:00+03:00,check_in.lt.'+tomorrow+'T00:00:00+03:00)',order:'check_in.desc'});
     if(Array.isArray(directAttendance))sj.attendance=directAttendance;
   }catch(e){console.warn('DIRECT_ATTENDANCE_LOAD_FAILED',e);}
   try{
-    const directBreaks=await restGet('breaks',{select:'id,employee_id,started_at,ended_at,allowed_minutes',started_at:'gte.'+today+'T00:00:00+03:00',started_at:'lt.'+tomorrow+'T00:00:00+03:00',order:'started_at.desc'});
+    const directBreaks=await restGet('breaks',{select:'id,employee_id,started_at,ended_at,allowed_minutes',and:'(started_at.gte.'+today+'T00:00:00+03:00,started_at.lt.'+tomorrow+'T00:00:00+03:00)',order:'started_at.desc'});
     if(Array.isArray(directBreaks))sj.breaks=directBreaks;
   }catch(e){console.warn('DIRECT_BREAK_LOAD_FAILED',e);}
   dashboardRequests=sj.requests||[];
