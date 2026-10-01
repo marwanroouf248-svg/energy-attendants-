@@ -81,35 +81,17 @@ function storeManagerSession(j){
 }
 async function restoreManagerSession(){const saved=localStorage.getItem('energy_manager_token')||'';const rt=localStorage.getItem('energy_manager_refresh_token')||'';if(!saved)return false;token=saved;refreshToken=rt;try{await api('manager_summary',{},false);return true}catch(_){if(await refreshManagerSession()){try{await api('manager_summary',{},false);return true}catch(__){}}token='';refreshToken='';localStorage.removeItem('energy_manager_token');localStorage.removeItem('energy_manager_refresh_token');return false}}
 async function directManagerLogin(email,password){
-  // Primary path: custom manager_login function.
-  try{
-    const j=await fetchJson(F,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'manager_login',email,password})});
-    const session=j?.session||j?.data?.session;
-    if(session?.access_token){storeManagerSession(session);return j;}
-    if(j?.error) throw Error(j.error);
-  }catch(primaryError){
-    // Fallback: authenticate directly with Supabase Auth, then let manager_summary
-    // validate the role. This avoids a transient Edge Function auth failure
-    // blocking the whole manager portal.
-    try{
-      const j=await fetchJson(SUPABASE_URL+'/auth/v1/token?grant_type=password',{
-        method:'POST',
-        headers:{'Content-Type':'application/json','apikey':SUPABASE_PUBLISHABLE_KEY},
-        body:JSON.stringify({email,password})
-      });
-      if(j?.access_token){
-        storeManagerSession(j);
-        await api('manager_summary');
-        return {session:j};
-      }
-    }catch(fallbackError){
-      const a=String(primaryError?.message||'');
-      const b=String(fallbackError?.message||'');
-      if(b) throw Error(b);
-      if(a) throw Error(a);
-    }
-    throw primaryError;
-  }
+  // Stable login path: use Supabase Auth directly. The old custom manager_login
+  // function is intentionally not used here because older Edge Function code
+  // can leave the login spinner hanging even when the account is valid.
+  const j=await fetchJson(SUPABASE_URL+'/auth/v1/token?grant_type=password',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','apikey':SUPABASE_PUBLISHABLE_KEY},
+    body:JSON.stringify({email,password})
+  });
+  if(!j?.access_token) throw Error(j?.error_description||j?.msg||'بيانات الدخول غير صحيحة');
+  storeManagerSession(j);
+  return {session:j};
 }
 async function refreshManagerSession(){
   const rt=refreshToken||localStorage.getItem('energy_manager_refresh_token')||'';
