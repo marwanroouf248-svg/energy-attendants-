@@ -171,11 +171,11 @@ let liveTimer=null;let liveRefreshing=false;function startLiveDashboard(){if(liv
     if(Array.isArray(directAttendance))sj.attendance=directAttendance;
   }catch(e){console.warn('DIRECT_ATTENDANCE_LOAD_FAILED',e);}
   try{
-    const directBreaks=await restGet('breaks',{select:'id,employee_id,started_at,ended_at,allowed_minutes',and:'(started_at.gte.'+today+'T00:00:00+03:00,started_at.lt.'+tomorrow+'T00:00:00+03:00)',order:'started_at.desc'});
+    const directBreaks=await restGet('break_sessions',{select:'id,employee_id,started_at,ended_at,allowed_minutes',and:'(started_at.gte.'+today+'T00:00:00+03:00,started_at.lt.'+tomorrow+'T00:00:00+03:00)',order:'started_at.desc'});
     if(Array.isArray(directBreaks))sj.breaks=directBreaks;
   }catch(e){console.warn('DIRECT_BREAK_LOAD_FAILED',e);}
   dashboardRequests=sj.requests||[];
-  dashboardBreaks=sj.breaks||[];
+  dashboardBreaks=Array.isArray(sj.breaks)?sj.breaks:[];
   dashboardBreakIds=new Set(dashboardBreaks.filter(x=>!x.ended_at).map(x=>x.employee_id));
   const allAttendance=sj.attendance||[];
   // A late-midnight attendance record belongs to the new Cairo day when the actual check-in happened in the final 2 minutes before midnight and the attendance row was created shortly after midnight. This prevents the daily KPI from losing employees like Hassan while avoiding counting older shifts merely because their row was written after midnight.
