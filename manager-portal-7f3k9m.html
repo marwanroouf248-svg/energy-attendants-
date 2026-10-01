@@ -36,6 +36,7 @@ button{border:0;border-radius:14px;padding:13px 17px;color:#fff;background:#172a
 <section class="panel" id="ratesPanel"><div class="panel-head"><div><h2>📈 معدل التسجيل لكل موظف</h2><p>نسبة الأيام التي ظهر فيها تسجيل حضور داخل الفترة المحددة.</p></div></div><div class="report-controls"><input id="rateFrom" type="date"><input id="rateTo" type="date"><button class="primary" onclick="renderAttendanceRates()">حساب المعدل</button></div><div id="attendanceRates" class="report-table"></div></section><section class="panel"><div class="panel-head"><div><h2>👥 دليل الموظفين</h2><p>الفرع والقسم والحالة الحالية</p></div></div><div id="employees" class="employee-directory"></div></section></div></section></main><script>const SUPABASE_URL='https://kfrshaagrcggcjalsjdu.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY='sb_publishable_mKftrB-itebmeA-bdtt6dw_Q3QnxH0_';
 const F=SUPABASE_URL+'/functions/v1/employee-kiosk';
+const MANAGER_API=SUPABASE_URL+'/functions/v1/manager-dashboard-api';
 const APPROVAL_F=SUPABASE_URL+'/functions/v1/attendance-approval';
 let token='',refreshToken='',rows=[],employees=[],dashboardBreaks=[],dashboardBreakIds=new Set();
 const $=x=>document.getElementById(x);
@@ -54,8 +55,10 @@ async function fetchJson(url,options={},timeoutMs=12000){
   }finally{clearTimeout(timer);}
 }
 async function api(action,body={},retry=true){
+  const managerActions=new Set(['manager_summary','manager_report','manager_telegram_logs','manager_telegram_status']);
+  const endpoint=managerActions.has(action)?MANAGER_API:F;
   try{
-    return await fetchJson(F,{method:'POST',headers:{'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},body:JSON.stringify({action,...body})});
+    return await fetchJson(endpoint,{method:'POST',headers:{'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},body:JSON.stringify({action,...body})});
   }catch(e){
     if(retry&&token&&String(e.message).includes('غير مصرح')){
       if(await refreshManagerSession()) return api(action,body,false);
