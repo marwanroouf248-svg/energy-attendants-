@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Energy Plus — Performance OS</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{--bg:#0b1016;--p:#121a23;--p2:#182431;--line:#293746;--txt:#f5f7fa;--muted:#91a0b2;--green:#6ee7b7;--blue:#60a5fa;--red:#fb7185;--yellow:#fbbf24}
+*{box-sizing:border-box}body{margin:0;background:linear-gradient(135deg,#080b10,#101a24);color:var(--txt);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}button,input,select,textarea{font:inherit}button{cursor:pointer}.app{min-height:100vh;display:grid;grid-template-columns:250px 1fr}.side{padding:22px;border-left:1px solid var(--line);background:#0b1118;position:sticky;top:0;height:100vh}.brand{font-size:20px;font-weight:900}.brand b{color:var(--green)}.muted{color:var(--muted);font-size:12px}.nav{margin-top:28px;display:grid;gap:7px}.nav button{border:0;background:transparent;color:#aebccc;text-align:right;padding:11px 13px;border-radius:11px}.nav button.active,.nav button:hover{background:var(--p2);color:#fff}.user{position:absolute;bottom:18px;left:18px;right:18px;background:var(--p);border:1px solid var(--line);padding:12px;border-radius:13px}main{padding:26px;max-width:1500px;width:100%;margin:auto}.top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:20px}.top h1{margin:0;font-size:28px}.btn{border:1px solid var(--line);background:var(--p2);color:#fff;padding:9px 13px;border-radius:10px}.primary{background:var(--green);color:#06120e;border-color:transparent;font-weight:800}.blue{background:var(--blue);color:#06111c;border-color:transparent;font-weight:800}.card{background:rgba(18,26,35,.9);border:1px solid var(--line);border-radius:15px;padding:16px}.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:13px}.metric small{color:var(--muted)}.metric strong{display:block;font-size:28px;margin-top:7px}.layout{display:grid;grid-template-columns:330px 1fr;gap:14px}.list{max-height:calc(100vh - 160px);overflow:auto}.emp{padding:12px;border-radius:11px;background:#101821;margin-bottom:7px;border:1px solid transparent;cursor:pointer}.emp.active{border-color:#4c806d;background:#13251f}.emp strong{display:block}.tabs{display:flex;gap:7px;border-bottom:1px solid var(--line);padding-bottom:8px;margin-bottom:15px}.tabs button{border:0;background:transparent;color:var(--muted);padding:8px 11px;border-radius:9px}.tabs .active{background:var(--p2);color:#fff}.row{display:grid;grid-template-columns:1.5fr .65fr .7fr .75fr 1.3fr;gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}.head{color:var(--muted);font-size:12px}.field{width:100%;background:#0c1219;border:1px solid var(--line);color:#fff;border-radius:9px;padding:8px}.progress{height:9px;background:#080d12;border-radius:20px;overflow:hidden}.bar{height:100%;background:var(--green);border-radius:20px}.green{color:var(--green)}.yellow{color:var(--yellow)}.red{color:var(--red)}.pill{display:inline-flex;padding:4px 8px;border-radius:99px;background:var(--p2);font-size:11px}.two{display:grid;grid-template-columns:1fr 1fr;gap:13px}.task{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:start;padding:11px 0;border-bottom:1px solid var(--line)}.task input{width:18px;height:18px}.ai{background:linear-gradient(135deg,#102030,#142c30);border-color:#31536b}.aiScore{font-size:42px;font-weight:900;color:var(--green)}.login{min-height:100vh;display:grid;place-items:center;padding:20px}.login .card{width:min(430px,100%)}.empty{text-align:center;color:var(--muted);padding:35px}.hide{display:none}@media(max-width:900px){.app{display:block}.side{position:relative;height:auto;border-left:0;border-bottom:1px solid var(--line)}.nav{display:flex;overflow:auto}.user{position:static;margin-top:18px}.layout{grid-template-columns:1fr}.list{max-height:280px}.metrics{grid-template-columns:repeat(2,1fr)}}@media(max-width:600px){main{padding:14px}.two{grid-template-columns:1fr}.row{grid-template-columns:1.4fr .7fr .7fr}.row>:nth-child(5){display:none}}
+</style>
+</head>
+<body><div id="root"></div>
+<script>
+var URL="https://kfrshaagrcggcjalsjdu.supabase.co";
+var KEY="sb_publishable_mKftrB-itebmeA-bdtt6dw_Q3QnxH0_";
+var sb=window.supabase.createClient(URL,KEY);
+var S={session:null,me:null,employees:[],selected:null,settings:{},kpis:[],tasks:[],docs:[],tab:"overview",start:monthStart(),end:monthEnd(),ai:null};
+var roles={sales:"Sales Representative",sales_manager:"Sales Manager",sales_tl:"Sales Team Leader",fitness_manager:"Fitness Manager",quality:"Quality",hr:"HR",finance:"Finance",branding:"Branding / Marketing",operations:"Operations",assessment:"Medical Assessment",house_manager:"House Manager",general:"General"};
+var defaults={Sales:"sales",Coach:"fitness_manager",Quality:"quality",HR:"hr",Finance:"finance",Branding:"branding",Assessment:"assessment","House keeping":"house_manager",Operations:"operations"};
+function monthStart(){var d=new Date();return new Date(d.getFullYear(),d.getMonth(),1).toISOString().slice(0,10)}
+function monthEnd(){var d=new Date();return new Date(d.getFullYear(),d.getMonth()+1,0).toISOString().slice(0,10)}
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(m){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]})}
+function cls(s){s=Number(s||0);return s>=90?"green":s>=70?"yellow":"red"}
+function msg(x){var n=document.createElement("div");n.textContent=x;n.style="position:fixed;bottom:18px;right:18px;background:#182431;border:1px solid #395065;padding:11px 14px;border-radius:11px;z-index:99";document.body.appendChild(n);setTimeout(function(){n.remove()},2500)}
+function isManager(){return S.me && (S.me.role==="manager"||S.me.role==="admin")}
+async function init(){
+ var g=await sb.auth.getSession();S.session=g.data.session;
+ if(!S.session){loginPage();return}
+ var r=await sb.from("profiles").select("id,full_name,email,role,active,branch,department,employee_code").eq("id",S.session.user.id).single();
+ if(r.error){loginPage(r.error.message);return}
+ S.me=r.data;await loadEmployees();
+ S.selected=isManager()?S.employees[0]:S.me;
+ if(S.selected)await loadSelected();
+ app();
+}
+function loginPage(error){
+ document.getElementById("root").innerHTML='<div class="login"><div class="card"><div class="brand">ENERGY <b>PLUS</b></div><div class="muted">Performance & Management OS</div><h2>تسجيل الدخول</h2><div class="muted">'+esc(error||"")+'</div><p>Email</p><input id="email" class="field"><p>Password</p><input id="pass" type="password" class="field"><br><br><button class="btn primary" style="width:100%" onclick="login()">دخول</button></div></div>';
+}
+async function login(){var r=await sb.auth.signInWithPassword({email:document.getElementById("email").value,password:document.getElementById("pass").value});if(r.error)msg(r.error.message);else init()}
+async function loadEmployees(){
+ if(isManager()){var r=await sb.from("profiles").select("id,full_name,email,role,active,branch,department,employee_code").eq("active",true).order("full_name");S.employees=r.data||[];if(r.error)msg(r.error.message)}
+ else S.employees=[S.me];
+}
+async function loadSelected(){
+ if(!S.selected)return;
+ var id=S.selected.id;
+ var a=await Promise.all([
+  sb.from("performance_employee_settings").select("*").eq("employee_id",id).maybeSingle(),
+  sb.from("performance_employee_kpis").select("*,performance_kpi_definitions(*)").eq("employee_id",id).eq("period_start",S.start).eq("period_end",S.end),
+  sb.from("performance_tasks").select("*").eq("employee_id",id).order("created_at",{ascending:false}),
+  sb.from("hr_documents").select("id,title,document_type,file_url,notes,created_at").eq("employee_id",id).order("created_at",{ascending:false})
+ ]);
+ S.settings=a[0].data||{role_key:defaults[S.selected.department]||"general",responsibilities:"",raci:{}};
+ S.kpis=a[1].data||[];S.tasks=a[2].data||[];S.docs=a[3].data||[];S.ai=null;
+}
+function score(){
+ var v=S.kpis.filter(function(k){return k.score!==null&&k.score!==undefined});
+ if(!v.length)return 0;
+ var w=v.reduce(function(a,k){return a+Number(k.performance_kpi_definitions.weight||1)},0);
+ return v.reduce(function(a,k){return a+Number(k.score||0)*Number(k.performance_kpi_definitions.weight||1)},0)/w;
+}
+function app(){
+ document.getElementById("root").innerHTML='<div class="app"><aside class="side"><div class="brand">ENERGY <b>PLUS</b></div><div class="muted">Performance OS • Level 3</div><div class="nav">'+(isManager()?'<button id="n-overview" onclick="tab(\\'overview\\')">Dashboard</button>':"")+'<button id="n-employees" onclick="tab(\\'employees\\')">Employees</button><button id="n-file" onclick="tab(\\'file\\')">Employee File</button><button id="n-review" onclick="tab(\\'review\\')">Evaluation</button><button id="n-tasks" onclick="tab(\\'tasks\\')">Tasks</button></div><div class="user"><strong>'+esc(S.me.full_name)+'</strong><div class="muted">'+esc(S.me.role)+" • "+esc(S.me.department||"Management")+'</div><button class="btn" style="width:100%;margin-top:9px" onclick="logout()">تسجيل خروج</button></div></aside><main id="page"></main></div>';
+ tab(S.tab);
+}
+function tab(t){S.tab=t;document.querySelectorAll(".nav button").forEach(function(b){b.classList.remove("active")});var n=document.getElementById("n-"+t);if(n)n.classList.add("active");render()}
+function header(h,s){return '<div class="top"><div><h1>'+h+'</h1><div class="muted">'+s+'</div></div><button class="btn" onclick="refresh()">↻ Refresh</button></div>'}
+async function render(){
+ var p=document.getElementById("page");if(S.tab==="overview"){await overview(p);return}if(S.tab==="employees"){employees(p);return}if(S.tab==="file"){file(p);return}if(S.tab==="review"){await review(p);return}if(S.tab==="tasks"){tasks(p);return}
+}
+async function overview(p){
+ var scores=[];
+ for(var i=0;i<S.employees.length;i++){var e=S.employees[i];var q=await sb.from("performance_employee_kpis").select("score,performance_kpi_definitions(weight)").eq("employee_id",e.id).eq("period_start",S.start).eq("period_end",S.end);var v=q.data||[],w=v.reduce(function(a,x){return a+Number(x.performance_kpi_definitions.weight||1)},0),sc=w?v.reduce(function(a,x){return a+Number(x.score||0)*Number(x.performance_kpi_definitions.weight||1)},0)/w:null;scores.push({e:e,s:sc})}
+ var rated=scores.filter(function(x){return x.s!=null}),avg=rated.length?rated.reduce(function(a,x){return a+x.s},0)/rated.length:0;
+ var tq=await sb.from("performance_tasks").select("status"),td=(tq.data||[]).filter(function(x){return x.status==="done"}).length;
+ p.innerHTML=header("Management Dashboard","Monthly Performance • "+S.start+" → "+S.end)+'<div class="metrics"><div class="card metric"><small>Employees</small><strong>'+S.employees.length+'</strong></div><div class="card metric"><small>Average KPI</small><strong class="'+cls(avg)+'">'+Math.round(avg)+'%</strong></div><div class="card metric"><small>Tasks Done</small><strong>'+td+'</strong></div><div class="card metric"><small>Rated Employees</small><strong>'+rated.length+'</strong></div></div><div style="height:15px"></div><div class="card"><div class="row head"><div>Employee</div><div>Department</div><div>Branch</div><div>Score</div><div>Status</div></div>'+scores.map(function(x){return '<div class="row" onclick="pick(\\''+x.e.id+'\\')" style="cursor:pointer"><div><strong>'+esc(x.e.full_name)+'</strong></div><div>'+esc(x.e.department||"—")+'</div><div>'+esc(x.e.branch||"All")+'</div><div class="'+cls(x.s)+'"><strong>'+(x.s==null?"—":Math.round(x.s)+"%")+'</strong></div><div><span class="pill">'+(x.s==null?"Not rated":x.s>=90?"Excellent":x.s>=80?"Good":x.s>=70?"Needs Improvement":"Review")+'</span></div></div>'}).join("")+'</div>';
+}
+function employees(p){
+ p.innerHTML=header("Employees","كل موظف له ملف مستقل")+'<div class="layout"><div class="card" style="max-height:calc(100vh - 160px);overflow:auto">'+S.employees.map(function(e){return '<div class="emp '+(S.selected&&S.selected.id===e.id?"active":"")+'" onclick="pick(\\''+e.id+'\\')"><strong>'+esc(e.full_name)+'</strong><span class="muted">'+esc(e.department||"—")+' • '+esc(e.branch||"All")+'</span></div>'}).join("")+'</div><div class="card">'+(S.selected?'<h2>'+esc(S.selected.full_name)+'</h2><div class="muted">'+esc(roles[S.settings.role_key]||S.settings.role_key)+" • "+esc(S.selected.branch||"All")+'</div><br><div class=\"progress\"><div class=\"bar\" style=\"width:"+Math.min(100,score())+'%"></div></div><p>Current KPI Score: <strong class="'+cls(score())+'">'+Math.round(score())+'%</strong></p><button class="btn primary" onclick="tab(\\'file\\')">Open Employee File</button>':"<div class=\"empty\">اختار موظف</div>")+'</div></div>';
+}
+async function pick(id){S.selected=S.employees.find(function(e){return e.id===id});await loadSelected();tab("file")}
+async function ensureKpis(){
+ var role=S.settings.role_key||defaults[S.selected.department]||"general";
+ var r=await sb.from("performance_kpi_definitions").select("*").eq("role_key",role).eq("active",true).order("created_at");
+ if(r.error){msg(r.error.message);return}
+ for(var i=0;i<(r.data||[]).length;i++){var d=r.data[i];if(!S.kpis.some(function(k){return k.kpi_id===d.id})){var x=await sb.from("performance_employee_kpis").insert({employee_id:S.selected.id,kpi_id:d.id,period_start:S.start,period_end:S.end,target_value:d.target_value}).select("*,performance_kpi_definitions(*)").single();if(x.data)S.kpis.push(x.data)}}
+}
+function file(p){
+ if(!S.selected){p.innerHTML=header("Employee File","");return}
+ var role=S.settings.role_key||defaults[S.selected.department]||"general";
+ var roleOptions=Object.keys(roles).map(function(k){return '<option value="'+k+'" '+(k===role?"selected":"")+'>'+roles[k]+"</option>"}).join("");
+ p.innerHTML=header("Employee File",esc(S.selected.full_name)+" • "+esc(S.selected.department||"—"))+'<div class="card"><div class="two"><div><h2 style="margin-top:0">'+esc(S.selected.full_name)+'</h2><div class="muted">'+esc(S.selected.email||"")+" • "+esc(S.selected.branch||"All")+'</div></div><div><div class="muted">Role Profile</div>'+(isManager()?'<select id="role" class="field">'+roleOptions+"</select>":'<span class="pill">'+esc(roles[role]||role)+"</span>")+'</div></div>'+(isManager()?'<p class="muted">Responsibilities</p><textarea id="resp" class="field" rows="3">'+esc(S.settings.responsibilities||"")+'</textarea><br><br><button class="btn primary" onclick="saveSettings()">Save Profile</button>':"")+'</div><div style="height:13px"></div><div class="card"><div class="top"><h3 style="margin:0">KPI Scorecard</h3><strong class="'+cls(score())+'">'+Math.round(score())+"%</strong></div>"+kpiTable()+'</div><div style="height:13px"></div><div class="card"><h3>Documents</h3>'+(S.docs.length?S.docs.map(function(d){return '<div class="task"><div>📄</div><div><strong>'+esc(d.title)+'</strong><div class="muted">'+esc(d.document_type||"document")+'</div></div><div>'+(d.file_url?'<a class="btn" target="_blank" href="'+esc(d.file_url)+'">Open</a>':"")+"</div></div>"}).join(""):'<div class="empty">No documents yet.</div>')+'</div>';
+}
+function kpiTable(){
+ if(!S.kpis.length)return '<div class="empty">لا توجد KPIs. افتح Evaluation ثم سيقوم النظام بإنشاء Scorecard الدور.</div>';
+ return '<div class="row head"><div>KPI</div><div>Weight</div><div>Target</div><div>Score</div><div>Manager Note</div></div>'+S.kpis.map(function(k){return '<div class="row"><div><strong>'+esc(k.performance_kpi_definitions.name)+'</strong><div class="muted">'+esc(k.performance_kpi_definitions.target_unit||"")+'</div></div><div>'+k.performance_kpi_definitions.weight+'%</div><div>'+esc(k.target_value==null?k.performance_kpi_definitions.target_value:k.target_value)+'</div><div>'+(isManager()?'<input class="field" data-score="'+k.id+'" type="number" min="0" max="100" value="'+(k.score==null?"":k.score)+'">':'<strong class="'+cls(k.score)+'">'+(k.score==null?"—":k.score)+'</strong>')+'</div><div>'+(isManager()?'<input class="field" data-note="'+k.id+'" value="'+esc(k.manager_note||"")+'">':'<span class="muted">'+esc(k.manager_note||"")+"</span>")+'</div></div>"}).join("");
+}
+async function saveSettings(){
+ var role=document.getElementById("role").value,resp=document.getElementById("resp").value;
+ var r=await sb.from("performance_employee_settings").upsert({employee_id:S.selected.id,role_key:role,display_title:roles[role],responsibilities:resp,updated_by:S.me.id,updated_at:new Date().toISOString()});
+ if(r.error)msg(r.error.message);else{await loadSelected();await ensureKpis();render();msg("Profile saved")}
+}
+async function review(p){
+ if(!S.selected){p.innerHTML=header("Evaluation","");return}
+ await ensureKpis();var s=score();
+ p.innerHTML=header("Monthly Evaluation",esc(S.selected.full_name)+" • "+S.start+" → "+S.end)+'<div class="metrics"><div class="card metric"><small>Current Score</small><strong class="'+cls(s)+'">'+Math.round(s)+'%</strong></div><div class="card metric"><small>Tasks</small><strong>'+S.tasks.filter(function(t){return t.status==="done"}).length+"/"+S.tasks.length+'</strong></div><div class="card metric"><small>Role</small><strong style="font-size:16px">'+esc(roles[S.settings.role_key]||S.settings.role_key)+'</strong></div><div class="card metric"><small>Status</small><strong style="font-size:16px">'+(s>=90?"Excellent":s>=80?"Good":s>=70?"Needs Improvement":s?"Review":"Not Rated")+'</strong></div></div><div style="height:14px"></div><div class="card"><div class="two"><div><p class="muted">Strengths</p><textarea id="strengths" class="field" rows="5"></textarea></div><div><p class="muted">Improvements</p><textarea id="improvements" class="field" rows="5"></textarea></div></div><p class="muted">Manager Comment</p><textarea id="comment" class="field" rows="4"></textarea><p class="muted">Next Goals</p><textarea id="goals" class="field" rows="4"></textarea><br><br><div class="actions"><button class="btn blue" onclick="aiReview()">✨ Analyze with AI</button><button class="btn primary" onclick="saveReview()">Save Final Evaluation</button></div></div>'+(S.ai?aiBox():"");
+}
+function aiBox(){
+ var a=S.ai;return '<div style="height:14px"></div><div class="card ai"><div class="muted">AI recommendation — لا يعتمد تلقائيًا.</div><div class="aiScore">'+Math.round(Number(a.suggested_score||0))+'%</div><p>'+esc(a.summary||"")+'</p><div class="two"><div><strong>Strengths</strong><ul>'+(a.strengths||[]).map(function(x){return "<li>"+esc(x)+"</li>"}).join("")+'</ul></div><div><strong>Improvements</strong><ul>'+(a.improvements||[]).map(function(x){return "<li>"+esc(x)+"</li>"}).join("")+'</ul></div></div><button class="btn primary" onclick="applyAI()">Use AI suggestions</button></div>';
+}
+async function aiReview(){
+ var snap={employee:S.selected,period_start:S.start,period_end:S.end,role:S.settings,kpis:S.kpis.map(function(k){return {name:k.performance_kpi_definitions.name,weight:k.performance_kpi_definitions.weight,target:k.target_value,actual:k.actual_value,score:k.score,note:k.manager_note}}),tasks:S.tasks.map(function(t){return {title:t.title,status:t.status,points:t.points,evidence_note:t.evidence_note}}),manager_notes:(document.getElementById("comment")||{}).value||""};
+ var r=await sb.functions.invoke("performance-ai",{body:{snapshot:snap}});
+ if(r.error){msg(r.error.message);return}if(!r.data||!r.data.ok){msg(r.data&&r.data.error||"AI error");return}S.ai=r.data.result;render();msg(r.data.result.ai_available?"AI analysis ready":"Fallback analysis ready")}
+function applyAI(){if(!S.ai)return;document.getElementById("strengths").value=(S.ai.strengths||[]).join("\\n");document.getElementById("improvements").value=(S.ai.improvements||[]).join("\\n");msg("AI suggestions inserted. Review before saving.")}
+async function saveReview(){
+ for(var i=0;i<S.kpis.length;i++){var k=S.kpis[i],a=document.querySelector('[data-score="'+k.id+'"]'),n=document.querySelector('[data-note="'+k.id+'"]');if(a){await sb.from("performance_employee_kpis").update({score:a.value===""?null:Number(a.value),manager_note:n?n.value:"",updated_by:S.me.id,updated_at:new Date().toISOString()}).eq("id",k.id)}}
+ await loadSelected();var r=await sb.from("performance_manager_reviews").upsert({employee_id:S.selected.id,reviewer_id:S.me.id,period_start:S.start,period_end:S.end,overall_score:score(),manager_comment:document.getElementById("comment").value,strengths:document.getElementById("strengths").value,improvements:document.getElementById("improvements").value,goals:document.getElementById("goals").value,status:"final",updated_at:new Date().toISOString()},{onConflict:"employee_id,period_start,period_end"});
+ if(r.error)msg(r.error.message);else{msg("تم حفظ التقييم");await loadSelected();render()}
+}
+function tasks(p){
+ if(!S.selected){p.innerHTML=header("Tasks","");return}
+ var done=S.tasks.filter(function(t){return t.status==="done"}).length,total=S.tasks.length;
+ p.innerHTML=header("Task Completion",esc(S.selected.full_name)+" • إنجاز المهام")+'<div class="card"><div class="progress"><div class="bar" style="width:'+(total?done/total*100:0)+'%"></div></div><p class="muted">Completed '+done+" / "+total+"</p>"+(S.tasks.length?S.tasks.map(function(t){return '<div class="task"><input type="checkbox" '+(t.status==="done"?"checked":"")+' onchange="toggleTask(\\''+t.id+'\\',this.checked)"><div><strong>'+esc(t.title)+'</strong><div class="muted">'+esc(t.description||"")+(t.due_date?" • Due "+esc(t.due_date):"")+'</div><div class="muted">'+esc(t.evidence_note||"")+'</div></div><span class="pill">'+esc(t.status)+'</span></div>"}).join(""):'<div class="empty">لا توجد مهام.</div>')+'</div>'+(isManager()?'<div style="height:13px"></div><div class="card"><h3>Add Task</h3><div class="two"><input id="tt" class="field" placeholder="Task title"><input id="td" type="date" class="field"></div><textarea id="tx" class="field" rows="3" style="margin-top:8px" placeholder="Expected result / description"></textarea><br><button class="btn primary" onclick="addTask()">Add Task</button></div>':"");
+}
+async function toggleTask(id,done){var r=await sb.from("performance_tasks").update({status:done?"done":"todo",completed_at:done?new Date().toISOString():null,updated_at:new Date().toISOString()}).eq("id",id);if(r.error)msg(r.error.message);else{await loadSelected();render()}}
+async function addTask(){var title=document.getElementById("tt").value.trim();if(!title)return;var r=await sb.from("performance_tasks").insert({employee_id:S.selected.id,title:title,description:document.getElementById("tx").value,due_date:document.getElementById("td").value||null,created_by:S.me.id});if(r.error)msg(r.error.message);else{await loadSelected();render();msg("Task added")}}
+async function refresh(){await loadEmployees();if(S.selected)await loadSelected();render()}
+async function logout(){await sb.auth.signOut();location.reload()}
+init();
+</script></body></html>
