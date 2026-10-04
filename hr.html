@@ -33,6 +33,7 @@ button,input,select,textarea{font:inherit}button{cursor:pointer;border:0}.app{di
 const key='energy_hr_v2';
 let state={employees:[],tasks:[],branches:[],attendance:[],reviews:[]};
 function save(){localStorage.setItem(key,JSON.stringify(state));}
+function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
 function avgBranch(b){let a=state.employees.filter(e=>e.branch===b&&Number.isFinite(e.score));return a.length?Math.round(a.reduce((x,e)=>x+e.score,0)/a.length):null}
 function scoreText(s){return Number.isFinite(s)?s+'%':'—'}
 function jobText(e){return e.job||e.dept||'—'}
