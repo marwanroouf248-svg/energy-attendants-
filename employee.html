@@ -144,21 +144,138 @@ async function reloadPortal(){data=await api('employee_portal');render()}
 async function boot(){let g=await S.auth.getSession();session=g.data.session;if(!session){location.href='./hr-login.html';return}let me=await api('me');if(me.manager){location.href='./hr.html';return}perms=me.account.permissions||{};data=await api('employee_portal');await api('calculate_daily_earning',{employee_id:data.profile.id,work_date:new Date().toISOString().slice(0,10)});data.finance=await api('employee_360',{employee_id:data.profile.id});const ns=await api('employee_notifications');data.notifications=ns.notifications||[];const rq=await api('employee_requests');data.employeeRequests=rq.requests||[];let items=[['dashboard','📊 الرئيسية',true],['tasks','✅ مهامي',perms.tasks],['attendance','🕒 حضوري',perms.attendance],['performance','⭐ أدائي',perms.performance],['coach','🏋️ عملائي',canCoachFeature()],['leave','🏖️ الإجازات',true],['requests','📋 طلباتي',true],['finance','💰 دخلي',true],['profile','👤 بياناتي',true]];document.getElementById('nav').innerHTML=items.filter(x=>x[2]).map((x,i)=>'<button type="button" data-section="'+x[0]+'" class="'+(!i?'active':'')+'" onclick="show(\''+x[0]+'\',this)">'+x[1]+'</button>').join('');await loadLeaveTypes();if(canCoachFeature())await loadCoachData();render()}
 async function logout(){await S.auth.signOut();location.href='./hr-login.html'}boot().catch(e=>document.body.innerHTML='<div style="padding:40px;text-align:center">❌ '+esc(e.message)+'</div>');</script><script>
 (function(){
- function setup(){if(window.innerWidth>800)return;if(document.getElementById("mobileMenuBtn"))return;var side=document.querySelector(".nav")?.closest(".side");if(!side)return;var b=document.createElement("button");b.id="mobileMenuBtn";b.className="mobile-menu-btn";b.textContent="☰";var s=document.createElement("div");s.className="mobile-nav-shade";document.body.append(b,s);function close(){side.classList.remove("mobile-open");s.classList.remove("show");b.textContent="☰"}b.onclick=function(){var o=!side.classList.contains("mobile-open");side.classList.toggle("mobile-open",o);s.classList.toggle("show",o);b.textContent=o?"✕":"☰"};s.onclick=close;side.querySelectorAll("button").forEach(function(x){x.addEventListener("click",function(){setTimeout(close,80)})})}
- if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",setup);else setup();window.addEventListener("resize",function(){if(window.innerWidth>800){document.querySelector(".mobile-nav-shade")?.remove();document.getElementById("mobileMenuBtn")?.remove();document.querySelector(".side")?.classList.remove("mobile-open")}else setup()});
+  function setupMobileNav(){
+    if(window.innerWidth>800)return;
+    const nav=document.getElementById("nav");
+    if(!nav || document.getElementById("mobileMenuBtn"))return;
+    const btn=document.createElement("button");
+    btn.id="mobileMenuBtn";
+    btn.type="button";
+    btn.className="mobile-menu-btn";
+    btn.setAttribute("aria-label","فتح القائمة");
+    btn.setAttribute("aria-expanded","false");
+    btn.textContent="☰";
+    const shade=document.createElement("div");
+    shade.id="mobileNavShade";
+    shade.className="mobile-nav-shade";
+    document.body.append(btn,shade);
+
+    function close(){
+      nav.classList.remove("mobile-open");
+      shade.classList.remove("show");
+      btn.textContent="☰";
+      btn.setAttribute("aria-expanded","false");
+      btn.setAttribute("aria-label","فتح القائمة");
+      document.body.classList.remove("nav-locked");
+    }
+    function toggle(){
+      const open=!nav.classList.contains("mobile-open");
+      nav.classList.toggle("mobile-open",open);
+      shade.classList.toggle("show",open);
+      btn.textContent=open?"✕":"☰";
+      btn.setAttribute("aria-expanded",String(open));
+      btn.setAttribute("aria-label",open?"إغلاق القائمة":"فتح القائمة");
+      document.body.classList.toggle("nav-locked",open);
+    }
+    btn.addEventListener("click",toggle);
+    shade.addEventListener("click",close);
+    nav.addEventListener("click",function(e){
+      const item=e.target.closest("button[data-section]");
+      if(item)setTimeout(close,120);
+    });
+    document.addEventListener("keydown",function(e){if(e.key==="Escape")close()});
+  }
+  function sync(){
+    if(window.innerWidth<=800) setupMobileNav();
+    else {
+      document.getElementById("mobileNavShade")?.remove();
+      document.getElementById("mobileMenuBtn")?.remove();
+      document.getElementById("nav")?.classList.remove("mobile-open");
+      document.body.classList.remove("nav-locked");
+    }
+  }
+  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",sync);
+  else sync();
+  window.addEventListener("resize",sync);
 })();
-</script>\n</body><style>
-/* Energy System premium mobile navigation */
-.mobile-menu-btn{display:none}
+</script>
+<style>
+/* Mobile navigation — clean, reliable, touch friendly */
 @media(max-width:800px){
- body{padding-right:0!important;overflow-x:hidden}
- .side{position:fixed!important;right:0!important;top:0!important;bottom:0!important;width:min(310px,88vw)!important;height:100dvh!important;z-index:2000!important;transform:translateX(105%);transition:transform .25s ease!important;overflow-y:auto!important;background:linear-gradient(180deg,#0d121b,#070a0f)!important;box-shadow:-20px 0 60px rgba(0,0,0,.4)!important;padding:78px 14px 20px!important}
- .side.mobile-open{transform:translateX(0)}
- .mobile-menu-btn{display:grid;place-items:center;position:fixed;right:13px;top:13px;width:46px;height:46px;border-radius:14px;border:1px solid rgba(229,189,91,.28);background:rgba(10,14,21,.94);color:#e5bd5b;font-size:22px;z-index:2100;box-shadow:0 10px 30px rgba(0,0,0,.3)}
- .mobile-nav-shade{position:fixed;inset:0;background:rgba(0,0,0,.58);backdrop-filter:blur(3px);z-index:1990;opacity:0;pointer-events:none;transition:.2s}.mobile-nav-shade.show{opacity:1;pointer-events:auto}
- .top{padding-right:70px!important}
- .nav{position:static!important;display:flex!important;flex-direction:column!important;overflow:visible!important;background:transparent!important;border:0!important;box-shadow:none!important;padding:0!important;margin:0!important}
- .nav button{width:100%!important;text-align:right!important;margin:4px 0!important;min-height:46px!important}
- .wrap,.main{padding:18px 13px 70px!important}
+  body{padding-right:0!important;overflow-x:hidden}
+  body.nav-locked{overflow:hidden}
+  .top{padding-right:70px!important}
+  #nav.nav{
+    position:fixed!important;
+    right:0!important;
+    top:0!important;
+    bottom:0!important;
+    left:auto!important;
+    width:min(310px,88vw)!important;
+    height:100dvh!important;
+    margin:0!important;
+    padding:86px 14px 20px!important;
+    display:flex!important;
+    flex-direction:column!important;
+    flex-wrap:nowrap!important;
+    gap:7px!important;
+    overflow-y:auto!important;
+    overflow-x:hidden!important;
+    z-index:2000!important;
+    transform:translateX(105%)!important;
+    transition:transform .25s ease!important;
+    background:linear-gradient(180deg,#0b1018,#070a0f)!important;
+    border:0!important;
+    border-left:1px solid rgba(229,189,91,.16)!important;
+    border-radius:0!important;
+    box-shadow:-20px 0 60px rgba(0,0,0,.45)!important;
+  }
+  #nav.nav.mobile-open{transform:translateX(0)!important}
+  #nav.nav:before{content:"ENERGY SYSTEM";position:absolute;top:25px;right:20px;color:#fff;font-size:17px;font-weight:900;letter-spacing:1.3px}
+  #nav.nav:after{content:"بوابة الموظف";position:absolute;top:50px;right:20px;color:#7f8a9b;font-size:11px}
+  #nav.nav button{
+    width:100%!important;
+    min-height:48px!important;
+    flex:0 0 auto!important;
+    margin:0!important;
+    padding:12px 15px!important;
+    text-align:right!important;
+    justify-content:flex-start!important;
+    white-space:normal!important;
+    border-radius:13px!important;
+  }
+  .mobile-menu-btn{
+    display:grid!important;
+    place-items:center!important;
+    position:fixed!important;
+    right:13px!important;
+    top:13px!important;
+    width:46px!important;
+    height:46px!important;
+    z-index:2105!important;
+    border-radius:14px!important;
+    border:1px solid rgba(229,189,91,.3)!important;
+    background:rgba(10,14,21,.96)!important;
+    color:#e5bd5b!important;
+    font-size:22px!important;
+    cursor:pointer!important;
+    box-shadow:0 10px 30px rgba(0,0,0,.35)!important;
+  }
+  .mobile-nav-shade{
+    position:fixed!important;
+    inset:0!important;
+    z-index:1990!important;
+    background:rgba(0,0,0,.62)!important;
+    backdrop-filter:blur(3px)!important;
+    opacity:0!important;
+    pointer-events:none!important;
+    transition:opacity .2s ease!important;
+  }
+  .mobile-nav-shade.show{opacity:1!important;pointer-events:auto!important}
+  .wrap{padding:18px 13px 70px!important}
 }
-</style></html>
+@media(min-width:801px){
+  .mobile-menu-btn,.mobile-nav-shade{display:none!important}
+}
+</style>
+</body></html>
