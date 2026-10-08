@@ -89,6 +89,7 @@ html,body{min-width:320px}
 <div class="panel" style="margin-top:18px"><h2>🎯 جدول المقابلات والتوظيف</h2><table class="table"><thead><tr><th>المرشح</th><th>الوظيفة</th><th>الفرع</th><th>موعد المقابلة</th><th>التقييم</th><th>المرحلة</th></tr></thead><tbody id="wfInterviews"></tbody></table></div>
 </section>
 <section id="coachcenter" style="display:none">
+<div id="coachAccessNote" class="panel" style="display:none;margin-bottom:14px"><h3>صلاحيات مركز الكباتن</h3><p class="mini">يمكنك التحكم من صفحة حسابات الموظفين في صلاحيات تسجيل العميل والتحقق والتقييم.</p></div>
 <div class="cards">
 <div class="card"><div class="label">جلسات الكباتن اليوم</div><div class="metric" id="ccToday">0</div></div>
 <div class="card"><div class="label">عملاء مؤكدون</div><div class="metric" id="ccVerified">0</div></div>
@@ -232,7 +233,7 @@ render();
 const HR_AUTH=supabase.createClient('https://kfrshaagrcggcjalsjdu.supabase.co','sb_publishable_mKftrB-itebmeA-bdtt6dw_Q3QnxH0_');
 const HR_API='https://kfrshaagrcggcjalsjdu.supabase.co/functions/v1/hr-account-api';
 let hrSession=null,hrAccounts=[],hrEmployees=[];
-const PERM_LABELS={dashboard:'الرئيسية',tasks:'المهام اليومية',attendance:'الحضور والانصراف',performance:'الأداء وAI',profile:'بيانات الموظف'};
+const PERM_LABELS={dashboard:'الرئيسية',tasks:'المهام اليومية',attendance:'الحضور والانصراف',performance:'الأداء وAI',profile:'بيانات الموظف',coach_clients:'عملاء الكباتن',coach_add_client:'إضافة عميل للكابتن',coach_verify:'التحقق من العميل',coach_customer_rating:'تقييم العميل للكابتن',coach_manager_rating:'تقييم الإدارة للكابتن'};
 const COACH_API='https://kfrshaagrcggcjalsjdu.supabase.co/functions/v1/coach-api';
 async function coachApi(action,body={}){const r=await fetch(COACH_API,{method:'POST',headers:{Authorization:'Bearer '+hrSession.access_token,'Content-Type':'application/json'},body:JSON.stringify({action,...body})});const j=await r.json();if(!r.ok)throw Error(j.error||'خطأ');return j}
 let coachCenterData={sessions:[]};
