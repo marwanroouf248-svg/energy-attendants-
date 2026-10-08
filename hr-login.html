@@ -40,7 +40,7 @@ linear-gradient(145deg,#15130d,#090909 62%,#050505)}
 .btn:hover{transform:translateY(-1px);filter:brightness(1.06)}
 .btn:active{transform:translateY(0)}
 .err{min-height:22px;margin-top:14px;text-align:center;color:#f0a9a9;font-size:13px}
-.creator{text-align:center;color:#a99a72;font-size:12px;font-weight:700;margin-top:18px;line-height:1.6}.footer{text-align:center;color:#555;font-size:11px;margin-top:10px}
+.creator{text-align:center;color:#a99a72;font-size:12px;font-weight:700;margin-top:18px;line-height:1.6}.password-toggle{width:100%;margin-top:10px;background:transparent;border:1px solid #2b2b2b;color:#aaa;border-radius:13px;height:44px;cursor:pointer;font-size:13px}.password-toggle:hover{border-color:var(--gold);color:#fff}.btn.loading{opacity:.7;pointer-events:none}.footer{text-align:center;color:#555;font-size:11px;margin-top:10px}
 @media(max-width:850px){.shell{grid-template-columns:1fr;min-height:auto}.visual{min-height:360px;padding:34px}.hero h1{font-size:38px}.form-area{padding:42px 30px}}
 @media(max-width:520px){body{padding:12px}.shell{border-radius:22px}.visual{min-height:310px;padding:25px}.mark{width:52px;height:52px;border-radius:15px}.brand-name{font-size:18px}.hero h1{font-size:32px}.hero p{font-size:14px;line-height:1.7}.form-area{padding:32px 22px}.form-head h2{font-size:26px}}
 </style>
@@ -70,7 +70,8 @@ linear-gradient(145deg,#15130d,#090909 62%,#050505)}
       <input id="u" class="field" placeholder="اكتب البريد الإلكتروني" autocomplete="username" dir="ltr">
       <label class="label" for="p">كلمة المرور</label>
       <input id="p" class="field" type="password" placeholder="اكتب كلمة المرور" autocomplete="current-password" dir="ltr">
-      <button class="btn" onclick="login()">دخول للنظام</button>
+      <button class="btn" id="loginBtn" onclick="login()">دخول للنظام</button>
+      <button type="button" class="password-toggle" onclick="togglePassword()">إظهار كلمة المرور</button>
       <div id="err" class="err"></div>
       <div class="creator">Created by Captain Marwan | Under the guidance of Captain Karim Diab</div>
       <div class="footer">Energy Plus — نظام إدارة Energy System</div>
@@ -81,15 +82,16 @@ linear-gradient(145deg,#15130d,#090909 62%,#050505)}
 <script>
 const S=supabase.createClient('https://kfrshaagrcggcjalsjdu.supabase.co','sb_publishable_mKftrB-itebmeA-bdtt6dw_Q3QnxH0_');
 async function login(){
+ const btn=document.getElementById("loginBtn");
  const u=document.getElementById('u').value.trim(),p=document.getElementById('p').value,err=document.getElementById('err');
- err.textContent='جاري تسجيل الدخول...';
+ err.textContent='جاري تسجيل الدخول...'; btn?.classList.add('loading'); btn&&(btn.textContent='جاري الدخول...');
  let email=u.includes('@')?u:u+'@hr.energyplus.local';
  let {error}=await S.auth.signInWithPassword({email,password:p});
- if(error){err.textContent='اسم المستخدم أو كلمة المرور غير صحيحة';return}
+ if(error){err.textContent='اسم المستخدم أو كلمة المرور غير صحيحة';btn?.classList.remove('loading');btn&&(btn.textContent='دخول للنظام');return}
  const {data:{session}}=await S.auth.getSession();
  const r=await fetch('https://kfrshaagrcggcjalsjdu.supabase.co/functions/v1/hr-account-api',{method:'POST',headers:{Authorization:'Bearer '+session.access_token,'Content-Type':'application/json'},body:JSON.stringify({action:'me'})});
  const j=await r.json();
- if(!r.ok||!j.account){await S.auth.signOut();err.textContent='الحساب غير مفعّل في نظام HR';return}
+ if(!r.ok||!j.account){await S.auth.signOut();err.textContent='الحساب غير مفعّل في نظام Energy System';btn?.classList.remove('loading');btn&&(btn.textContent='دخول للنظام');return}
  location.href=j.manager?'./hr.html':'./employee.html'
 }
 S.auth.getSession().then(async({data:{session}})=>{
@@ -99,7 +101,8 @@ S.auth.getSession().then(async({data:{session}})=>{
   if(r.ok&&j.account)location.href=j.manager?'./hr.html':'./employee.html'
  }
 });
-document.addEventListener('DOMContentLoaded',()=>document.getElementById('u')?.focus());
+function togglePassword(){const p=document.getElementById('p'),b=document.querySelector('.password-toggle');if(!p)return;p.type=p.type==='password'?'text':'password';if(b)b.textContent=p.type==='password'?'إظهار كلمة المرور':'إخفاء كلمة المرور'}
+document.addEventListener('DOMContentLoaded',()=>{document.getElementById('u')?.focus();['u','p'].forEach(id=>document.getElementById(id)?.addEventListener('keydown',e=>{if(e.key==='Enter')login()}));});
 </script>
 </body>
 </html>
