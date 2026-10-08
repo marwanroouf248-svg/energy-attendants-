@@ -316,7 +316,7 @@ function renderAttendanceRequests(){
   const el=document.getElementById("attendanceRequestRows");if(!el)return;
   el.innerHTML=rows.slice(0,200).map(x=>{
     const name=x.profiles?.full_name||x.employee_id||"—",dept=x.profiles?.department||"—",branch=x.profiles?.branch||"—";
-    const action=x.status==="pending"?'<button class="btn green" onclick="decideAttendanceRequest(\\''+x.id+'\\',\\'approved\\')">✓ اعتماد</button> <button class="btn light" onclick="decideAttendanceRequest(\\''+x.id+'\\',\\'rejected\\')">رفض</button>':'—';
+    const action=x.status==="pending"?'<button class="btn green" onclick="decideAttendanceRequest(\''+x.id+'\',\'approved\')">✓ اعتماد</button> <button class="btn light" onclick="decideAttendanceRequest(\''+x.id+'\',\'rejected\')">رفض</button>':'—';
     return '<tr><td><b>'+esc(name)+'</b><div class="mini">'+esc(x.profiles?.employee_code||"")+'</div></td><td>'+esc(dept)+'</td><td>'+esc(branch)+'</td><td>'+attendanceRequestLabel(x.request_type)+'</td><td>'+new Date(x.requested_at).toLocaleString("ar-EG")+'</td><td>'+attendanceRequestStatus(x.status)+(x.rejection_reason?'<div class="mini">'+esc(x.rejection_reason)+'</div>':'')+'</td><td>'+action+'</td></tr>';
   }).join('')||'<tr><td colspan="7" class="empty">لا توجد طلبات حضور.</td></tr>';
 }
