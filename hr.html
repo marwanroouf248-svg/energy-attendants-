@@ -369,67 +369,13 @@ hrBoot().then(async()=>{await loadRealHRData();await refreshHRModules();await lo
   .mobile-menu-btn,.mobile-nav-shade{display:none!important}
 }
 </style>
+
+<style>
+.mobile-menu-btn{display:none}.mobile-nav-shade{display:none}
+@media(max-width:1000px){body{overflow-x:hidden}body.nav-open{overflow:hidden}.side{position:fixed!important;right:0!important;left:auto!important;top:0!important;bottom:0!important;width:min(310px,88vw)!important;height:100dvh!important;z-index:2000!important;transform:translateX(105%)!important;transition:transform .25s ease!important;overflow-y:auto!important;padding:78px 14px 24px!important;box-shadow:-20px 0 60px rgba(0,0,0,.45)!important}.side.mobile-open{transform:translateX(0)!important}.mobile-menu-btn{display:grid;place-items:center;position:fixed;right:14px;top:13px;width:46px;height:46px;border-radius:14px;z-index:2100;border:1px solid rgba(229,189,91,.28);background:linear-gradient(135deg,#e5bd5b,#a87821);color:#111;font-size:22px;box-shadow:0 10px 30px rgba(0,0,0,.35)}.mobile-nav-shade{display:block;position:fixed;inset:0;z-index:1990;background:rgba(0,0,0,.58);backdrop-filter:blur(3px);opacity:0;pointer-events:none;transition:opacity .2s ease}.mobile-nav-shade.show{opacity:1;pointer-events:auto}.nav{display:flex!important;flex-direction:column!important;gap:6px!important}.nav button{width:100%!important;margin:0!important;min-height:46px!important}.logout-btn{width:100%!important;margin-top:14px!important}.main{padding:76px 14px 28px!important}}
+@media(min-width:1001px){.mobile-menu-btn,.mobile-nav-shade{display:none!important}}
+</style>
 <script>
-(function(){
-  function setupMobileNav(){
-    var side=document.querySelector('.side');
-    if(!side)return;
-    var old=document.getElementById('mobileMenuBtn');
-    var shade=document.querySelector('.mobile-nav-shade');
-    if(window.innerWidth>1000){
-      side.classList.remove('mobile-open');
-      document.body.classList.remove('nav-locked');
-      if(old)old.remove();
-      if(shade)shade.remove();
-      return;
-    }
-    if(!old){
-      old=document.createElement('button');
-      old.id='mobileMenuBtn';
-      old.className='mobile-menu-btn';
-      old.type='button';
-      old.textContent='☰';
-      old.setAttribute('aria-label','فتح القائمة');
-      old.setAttribute('aria-expanded','false');
-      document.body.appendChild(old);
-      old.onclick=function(){
-        var open=!side.classList.contains('mobile-open');
-        side.classList.toggle('mobile-open',open);
-        if(shade)shade.classList.toggle('show',open);
-        document.body.classList.toggle('nav-locked',open);
-        old.textContent=open?'✕':'☰';
-        old.setAttribute('aria-expanded',String(open));
-        old.setAttribute('aria-label',open?'إغلاق القائمة':'فتح القائمة');
-      };
-    }
-    if(!shade){
-      shade=document.createElement('div');
-      shade.className='mobile-nav-shade';
-      shade.id='mobileNavShade';
-      document.body.insertBefore(shade,document.body.firstChild);
-      shade.onclick=closeMobileNav;
-    }
-    function closeMobileNav(){
-      side.classList.remove('mobile-open');
-      shade.classList.remove('show');
-      document.body.classList.remove('nav-locked');
-      var b=document.getElementById('mobileMenuBtn');
-      if(b){b.textContent='☰';b.setAttribute('aria-expanded','false');b.setAttribute('aria-label','فتح القائمة');}
-    }
-    side.querySelectorAll('.nav button,.logout-btn').forEach(function(x){
-      if(!x.dataset.mobileNavBound){
-        x.dataset.mobileNavBound='1';
-        x.addEventListener('click',function(){setTimeout(closeMobileNav,80);});
-      }
-    });
-    if(!window.__energyNavKeys){
-      window.__energyNavKeys=true;
-      document.addEventListener('keydown',function(e){if(e.key==='Escape')closeMobileNav();});
-    }
-  }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',setupMobileNav);
-  else setupMobileNav();
-  window.addEventListener('resize',setupMobileNav);
-})();
+(function(){function setup(){if(window.innerWidth>1000)return;var side=document.querySelector(".side");if(!side||document.getElementById("mobileMenuBtn"))return;var btn=document.createElement("button");btn.id="mobileMenuBtn";btn.className="mobile-menu-btn";btn.type="button";btn.textContent="☰";btn.setAttribute("aria-label","فتح القائمة");btn.setAttribute("aria-expanded","false");var shade=document.createElement("div");shade.id="mobileNavShade";shade.className="mobile-nav-shade";document.body.append(btn,shade);function close(){side.classList.remove("mobile-open");shade.classList.remove("show");document.body.classList.remove("nav-open");btn.textContent="☰";btn.setAttribute("aria-label","فتح القائمة");btn.setAttribute("aria-expanded","false")}function open(){side.classList.add("mobile-open");shade.classList.add("show");document.body.classList.add("nav-open");btn.textContent="✕";btn.setAttribute("aria-label","إغلاق القائمة");btn.setAttribute("aria-expanded","true")}btn.onclick=function(){side.classList.contains("mobile-open")?close():open()};shade.onclick=close;side.querySelectorAll(".nav button,.logout-btn").forEach(function(x){x.addEventListener("click",function(){setTimeout(close,80)})});document.addEventListener("keydown",function(e){if(e.key==="Escape")close()})}function reset(){if(window.innerWidth>1000){document.querySelector(".side")?.classList.remove("mobile-open");document.getElementById("mobileNavShade")?.remove();document.getElementById("mobileMenuBtn")?.remove();document.body.classList.remove("nav-open")}else setup()}if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",setup);else setup();window.addEventListener("resize",reset)})();
 </script>
 </body></html>
