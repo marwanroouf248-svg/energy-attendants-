@@ -240,10 +240,10 @@ async function telegramStatus(){try{const j=await api('manager_telegram_status')
   }
 })();;
 let dashboardRows=[],liveRows=[],dashboardRequests=[],dashboardEmployees=[],reportRows=[];
-function cairoDate(){return new Intl.DateTimeFormat('en-CA',{timeZone:'Africa/Cairo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());}
+function cairoDate(){const p=new Intl.DateTimeFormat('en-GB',{timeZone:'Africa/Cairo',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());const v=Object.fromEntries(p.filter(x=>x.type!=='literal').map(x=>[x.type,x.value]));return v.year+'-'+v.month+'-'+v.day;}function cairoTime(v=new Date()){return new Intl.DateTimeFormat('ar-EG',{timeZone:'Africa/Cairo',hour:'numeric',minute:'2-digit',hour12:true}).format(v);}
 function esc2(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
 function scrollToSection(id){document.getElementById(id)?.scrollIntoView({behavior:'smooth'});}
-let liveTimer=null;let liveRefreshing=false;function startLiveDashboard(){if(liveTimer)return;const tick=async()=>{if(document.hidden||liveRefreshing)return;liveRefreshing=true;try{await refreshDashboard();$('liveStatus').textContent='● LIVE • آخر تحديث '+new Date().toLocaleTimeString('ar-EG',{timeZone:'Africa/Cairo'});$('liveStatus').style.background='#123a25';$('liveStatus').style.color='#7af0a4';}catch(e){$('liveStatus').textContent='● LIVE • تعذر التحديث';$('liveStatus').style.background='#4a1d1d';$('liveStatus').style.color='#fca5a5';}finally{liveRefreshing=false;}};liveTimer=setInterval(tick,5000);tick();}function stopLiveDashboard(){if(liveTimer){clearInterval(liveTimer);liveTimer=null;}}document.addEventListener('visibilitychange',()=>{if(!document.hidden&&document.getElementById('dash')&&!document.getElementById('dash').classList.contains('hidden')){if(!liveTimer)startLiveDashboard();}});async function refreshDashboard(){
+let liveTimer=null;let liveRefreshing=false;function startLiveDashboard(){if(liveTimer)return;const tick=async()=>{if(document.hidden||liveRefreshing)return;liveRefreshing=true;try{await refreshDashboard();$('liveStatus').textContent='● LIVE • آخر تحديث '+cairoTime();$('liveStatus').style.background='#123a25';$('liveStatus').style.color='#7af0a4';}catch(e){$('liveStatus').textContent='● LIVE • تعذر التحديث';$('liveStatus').style.background='#4a1d1d';$('liveStatus').style.color='#fca5a5';}finally{liveRefreshing=false;}};liveTimer=setInterval(tick,5000);tick();}function stopLiveDashboard(){if(liveTimer){clearInterval(liveTimer);liveTimer=null;}}document.addEventListener('visibilitychange',()=>{if(!document.hidden&&document.getElementById('dash')&&!document.getElementById('dash').classList.contains('hidden')){if(!liveTimer)startLiveDashboard();}});async function refreshDashboard(){
  try{
   // Preserve report filters while the live dashboard refreshes every few seconds.
   const reportFilterState={
@@ -300,7 +300,7 @@ let liveTimer=null;let liveRefreshing=false;function startLiveDashboard(){if(liv
   if($('to'))$('to').value=reportFilterState.to||$('to').value||cairoDate();
   if($('employeeFilter'))$('employeeFilter').value=reportFilterState.employee||'';
   if(hasAccess('view_reports')){await loadReport(false);renderAttendanceRates();}
-  $('liveStatus').textContent='● LIVE • آخر تحديث '+new Date().toLocaleTimeString('ar-EG',{timeZone:'Africa/Cairo'});
+  $('liveStatus').textContent='● LIVE • آخر تحديث '+cairoTime();
  }catch(e){
   console.error('MANAGER_DATA_LOAD_ERROR',e);
   if($('liveStatus')){$('liveStatus').textContent='● LIVE • تعذر تحميل بيانات الموظفين';$('liveStatus').style.background='#4a1d1d';$('liveStatus').style.color='#fca5a5';}
