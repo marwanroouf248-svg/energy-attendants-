@@ -336,7 +336,8 @@ function renderAccountRows(){document.getElementById('accountRows').innerHTML=hr
 function editPerms(id){let a=hrAccounts.find(x=>x.id===id);if(!a)return;document.getElementById('modalContent').innerHTML='<h2>🔐 صلاحيات '+esc(a.username)+'</h2><p class="mini">علم فقط على الخانات التي تريد ظهورها للموظف.</p><div id="editPerms">'+permChecksHtml(a.permissions||{})+'</div><button class="btn green" style="margin-top:14px" onclick="savePerms(\''+a.id+'\')">حفظ الصلاحيات</button>';document.getElementById('modal').classList.add('show')}
 async function savePerms(id){let o={};document.querySelectorAll('#editPerms .perm').forEach(x=>o[x.dataset.k]=x.checked);try{await hrApi('update_permissions',{id,permissions:o});closeModal();loadAccountUI();toast('تم تحديث الصلاحيات')}catch(e){alert(e.message)}}
 hrBoot().then(async()=>{await loadRealHRData();await refreshHRModules();await loadCoachCenter()}).catch(e=>{console.error(e);location.href='./hr-login.html'});
-</script><script>async function logoutHR(){try{if(typeof HR_AUTH!=='undefined')await HR_AUTH.auth.signOut();}catch(e){console.error(e)}sessionStorage.clear();localStorage.removeItem('supabase.auth.token');location.href='./';}<style>
+</script><script>async function logoutHR(){try{if(typeof HR_AUTH!=='undefined')await HR_AUTH.auth.signOut();}catch(e){console.error(e)}sessionStorage.clear();localStorage.removeItem('supabase.auth.token');location.href='./';}</script>
+<style>
 /* Energy System — stable responsive navigation */
 @media(max-width:1000px){
   html,body{overflow-x:hidden}
