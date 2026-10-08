@@ -297,8 +297,7 @@ let liveTimer=null;let liveRefreshing=false;function startLiveDashboard(){if(liv
   if($('from'))$('from').value=reportFilterState.from||$('from').value||cairoDate();
   if($('to'))$('to').value=reportFilterState.to||$('to').value||cairoDate();
   if($('employeeFilter'))$('employeeFilter').value=reportFilterState.employee||'';
-  await loadReport(false);
-  renderAttendanceRates();
+  if(hasAccess('view_reports')){await loadReport(false);renderAttendanceRates();}
   $('liveStatus').textContent='● LIVE • آخر تحديث '+new Date().toLocaleTimeString('ar-EG');
  }catch(e){
   console.error('MANAGER_DATA_LOAD_ERROR',e);
