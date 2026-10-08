@@ -98,23 +98,47 @@ function renderRequests(){const leaves=data.leaves||[],loans=(data.finance?.loan
 async function loadLeaveTypes(){let r=await api('employee_leave_data');document.getElementById('leaveType').innerHTML=(r.leaveTypes||[]).map(x=>'<option value="'+x.id+'">'+esc(x.name_ar||x.name)+'</option>').join('')||'<option value="">لا توجد أنواع إجازات</option>'}
 async function submitLeave(){let leave_type_id=document.getElementById('leaveType').value,start_date=document.getElementById('leaveStart').value,end_date=document.getElementById('leaveEnd').value,reason=document.getElementById('leaveReason').value.trim();if(!leave_type_id||!start_date||!end_date){alert('اختر نوع الإجازة وتاريخ البداية والنهاية');return}if(end_date<start_date){alert('تاريخ النهاية يجب أن يكون بعد البداية');return}try{await api('request_leave',{leave_type_id,start_date,end_date,reason});document.getElementById('leaveReason').value='';await reloadPortal();alert('تم إرسال طلب الإجازة للمدير بنجاح')}catch(e){alert('تعذر إرسال الطلب: '+e.message)}}
 async function attendanceAction(mode){
-  const labels={in:"جاري تسجيل الدخول...",out:"جاري تسجيل الانصراف...",break_start:"جاري تسجيل بداية البريك...",break_end:"جاري تسجيل نهاية البريك..."};
-  try{const r=await api("attendance_action",{mode});await reloadPortal();alert(mode==="in"?"تم تسجيل الدخول بنجاح":mode==="out"?"تم تسجيل الانصراف بنجاح":mode==="break_start"?"تم تسجيل بداية البريك":"تم تسجيل نهاية البريك");}
-  catch(e){alert("تعذر التسجيل: "+e.message)}
+  const labels={in:"طلب تسجيل الدخول",out:"طلب تسجيل الانصراف",break_start:"طلب بدء البريك",break_end:"طلب إنهاء البريك"};
+  const button=document.querySelector('[data-attendance-mode="'+mode+'"]');
+  if(button)button.disabled=true;
+  try{
+    await api("attendance_action",{mode});
+    await reloadPortal();
+    alert("تم إرسال "+labels[mode]+" للإدارة. سيتم تحديث الحضور بعد الموافقة.");
+  }catch(e){
+    alert("تعذر إرسال الطلب: "+e.message);
+    if(button)button.disabled=false;
+  }
+}
+function attendanceRequestStatus(s){
+  if(s==="approved")return '<span class="pill green">تم الاعتماد</span>';
+  if(s==="rejected")return '<span class="pill red">مرفوض</span>';
+  return '<span class="pill yellow">قيد مراجعة الإدارة</span>';
+}
+function attendanceRequestLabel(t){
+  return ({in:"🟢 تسجيل دخول",out:"🔴 تسجيل انصراف",break_start:"☕ بدء بريك",break_end:"▶️ إنهاء بريك"})[t]||"طلب حضور";
 }
 function renderSelfAttendance(){
   const el=document.getElementById("attendanceSelf");if(!el)return;
-  const rows=data.attendance||[],open=rows.find(x=>x.check_in&&!x.check_out);
+  const rows=data.attendance||[], requests=data.attendanceRequests||[];
+  const open=rows.find(x=>x.check_in&&!x.check_out);
+  const pending=requests.filter(x=>x.status==="pending");
+  const pendingTypes=new Set(pending.map(x=>x.request_type));
   const latest=rows[0];
-  el.innerHTML='<div class="attendance-self"><div class="attendance-name">👤 '+esc(data.profile?.full_name||"الموظف")+'</div><div class="attendance-status">'+
-    (open?'<span class="pill green">● مسجل دخول</span>':'<span class="pill yellow">● غير مسجل دخول</span>')+
-    '</div><div class="attendance-actions">'+
-    '<button class="btn goldbtn" '+(open?'disabled':'')+' onclick="attendanceAction(\'in\')">🟢 تسجيل دخول</button>'+
-    '<button class="btn" '+(!open?'disabled':'')+' onclick="attendanceAction(\'break_start\')">☕ بدء بريك</button>'+
-    '<button class="btn" '+(!open?'disabled':'')+' onclick="attendanceAction(\'break_end\')">▶️ إنهاء بريك</button>'+
-    '<button class="btn dangerbtn" '+(!open?'disabled':'')+' onclick="attendanceAction(\'out\')">🔴 تسجيل انصراف</button></div>'+
-    (latest?'<div class="mini" style="margin-top:12px">آخر تسجيل دخول: '+new Date(latest.check_in).toLocaleString("ar-EG")+(latest.check_out?' • الانصراف: '+new Date(latest.check_out).toLocaleString("ar-EG"):"")+'</div>':'<div class="mini" style="margin-top:12px">لم يتم تسجيل حضور حتى الآن.</div>')+
-    '</div>';
+  const currentStatus=open?'مسجل دخول':'غير مسجل دخول';
+  el.innerHTML='<div class="attendance-self-card">'+
+    '<div class="attendance-head"><div><div class="muted">الموظف</div><h3 style="margin:5px 0">'+esc(data.profile?.full_name||"الموظف")+'</h3><div class="muted">طلبات الحضور تمر على الإدارة قبل اعتمادها.</div></div>'+
+    '<div>'+(open?'<span class="pill green">● '+currentStatus+'</span>':'<span class="pill yellow">● '+currentStatus+'</span>')+'</div></div>'+
+    '<div class="attendance-actions">'+
+    '<button class="btn goldbtn" data-attendance-mode="in" '+(open||pendingTypes.has("in")?'disabled':'')+' onclick="attendanceAction("in")">'+(pendingTypes.has("in")?'⏳ طلب الدخول قيد المراجعة':'🟢 طلب تسجيل دخول')+'</button>'+
+    '<button class="btn" data-attendance-mode="break_start" '+(!open||pendingTypes.has("break_start")?'disabled':'')+' onclick="attendanceAction("break_start")">'+(pendingTypes.has("break_start")?'⏳ طلب البريك قيد المراجعة':'☕ طلب بدء بريك')+'</button>'+
+    '<button class="btn" data-attendance-mode="break_end" '+(!open||pendingTypes.has("break_end")?'disabled':'')+' onclick="attendanceAction("break_end")">'+(pendingTypes.has("break_end")?'⏳ طلب إنهاء البريك قيد المراجعة':'▶️ طلب إنهاء بريك')+'</button>'+
+    '<button class="btn dangerbtn" data-attendance-mode="out" '+(!open||pendingTypes.has("out")?'disabled':'')+' onclick="attendanceAction("out")">'+(pendingTypes.has("out")?'⏳ طلب الانصراف قيد المراجعة':'🔴 طلب تسجيل انصراف')+'</button></div>'+
+    (pending.length?'<div class="attendance-pending"><b>طلباتك الحالية</b>'+pending.map(x=>'<div class="attendance-request-line"><span>'+attendanceRequestLabel(x.request_type)+'</span>'+attendanceRequestStatus(x.status)+'<small>'+new Date(x.requested_at).toLocaleString("ar-EG")+'</small></div>').join('')+'</div>':'')+
+    (latest?'<div class="mini" style="margin-top:14px">آخر حضور معتمد: '+new Date(latest.check_in).toLocaleString("ar-EG")+(latest.check_out?' • الانصراف: '+new Date(latest.check_out).toLocaleString("ar-EG"):" • مفتوح")+'</div>':'<div class="mini" style="margin-top:14px">لا يوجد حضور معتمد حتى الآن.</div>')+
+    '<div class="mini" style="margin-top:8px">⚠️ الضغط على الزر يرسل طلبًا فقط. لا يتغير سجل الحضور إلا بعد اعتماد الإدارة.</div>'+
+    '</div>'+
+    (requests.length?'<div class="attendance-history"><h3>سجل طلبات الحضور</h3>'+requests.slice(0,20).map(x=>'<div class="row"><div><b>'+attendanceRequestLabel(x.request_type)+'</b><div class="muted">'+new Date(x.requested_at).toLocaleString("ar-EG")+'</div></div><div>'+attendanceRequestStatus(x.status)+(x.rejection_reason?'<div class="muted" style="margin-top:4px">'+esc(x.rejection_reason)+'</div>':'')+'</div></div>').join('')+'</div>':'');
 }
 async function reloadPortal(){data=await api('employee_portal');render()}
 async function boot(){let g=await S.auth.getSession();session=g.data.session;if(!session){location.href='./hr-login.html';return}let me=await api('me');if(me.manager){location.href='./hr.html';return}perms=me.account.permissions||{};data=await api('employee_portal');await api('calculate_daily_earning',{employee_id:data.profile.id,work_date:new Date().toISOString().slice(0,10)});data.finance=await api('employee_360',{employee_id:data.profile.id});const ns=await api('employee_notifications');data.notifications=ns.notifications||[];const rq=await api('employee_requests');data.employeeRequests=rq.requests||[];let items=[['dashboard','📊 الرئيسية',true],['tasks','✅ مهامي',perms.tasks],['attendance','🕒 حضوري',perms.attendance],['performance','⭐ أدائي',perms.performance],['coach','🏋️ عملائي',canCoachFeature()],['leave','🏖️ الإجازات',true],['requests','📋 طلباتي',true],['finance','💰 دخلي',true],['profile','👤 بياناتي',true]];document.getElementById('nav').innerHTML=items.filter(x=>x[2]).map((x,i)=>'<button type="button" data-section="'+x[0]+'" class="'+(!i?'active':'')+'" onclick="show(\''+x[0]+'\',this)">'+x[1]+'</button>').join('');await loadLeaveTypes();if(canCoachFeature())await loadCoachData();render()}
