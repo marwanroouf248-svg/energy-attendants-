@@ -259,7 +259,7 @@ let liveTimer=null;let liveRefreshing=false;function startLiveDashboard(){if(liv
   dashboardBreaks=sj.breaks||[];
   dashboardBreakIds=new Set(dashboardBreaks.filter(x=>!x.ended_at).map(x=>x.employee_id));
   const today=cairoDate();
-  const allAttendance=sj.attendance||[];
+  const allAttendance=sj.all_attendance||sj.attendance||[];
   // A late-midnight attendance record belongs to the new Cairo day when the actual check-in happened in the final 2 minutes before midnight and the attendance row was created shortly after midnight. This prevents the daily KPI from losing employees like Hassan while avoiding counting older shifts merely because their row was written after midnight.
   const dayStart=new Date(today+'T00:00:00+03:00');
   const dayEnd=new Date(today+'T23:59:59.999+03:00');
