@@ -145,4 +145,23 @@ load();
   window.tab=function(id,b){if(id==="performance")ensureUpgradeUI();if(id==="notifications")loadSalesNotifications();oldTab(id,b);if(id==="performance")renderPerformance();};
   setTimeout(function(){ensureUpgradeUI();if(typeof loadSalesNotifications==="function")loadSalesNotifications();},1200);
 })();
-</script></body></html>
+</script><script>
+(function(){
+ function setup(){if(window.innerWidth>800)return;if(document.getElementById("mobileMenuBtn"))return;var side=document.querySelector(".nav")?.closest(".side");if(!side)return;var b=document.createElement("button");b.id="mobileMenuBtn";b.className="mobile-menu-btn";b.textContent="☰";var s=document.createElement("div");s.className="mobile-nav-shade";document.body.append(b,s);function close(){side.classList.remove("mobile-open");s.classList.remove("show");b.textContent="☰"}b.onclick=function(){var o=!side.classList.contains("mobile-open");side.classList.toggle("mobile-open",o);s.classList.toggle("show",o);b.textContent=o?"✕":"☰"};s.onclick=close;side.querySelectorAll("button").forEach(function(x){x.addEventListener("click",function(){setTimeout(close,80)})})}
+ if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",setup);else setup();window.addEventListener("resize",function(){if(window.innerWidth>800){document.querySelector(".mobile-nav-shade")?.remove();document.getElementById("mobileMenuBtn")?.remove();document.querySelector(".side")?.classList.remove("mobile-open")}else setup()});
+})();
+</script>\n</body><style>
+/* Energy System premium mobile navigation */
+.mobile-menu-btn{display:none}
+@media(max-width:800px){
+ body{padding-right:0!important;overflow-x:hidden}
+ .side{position:fixed!important;right:0!important;top:0!important;bottom:0!important;width:min(310px,88vw)!important;height:100dvh!important;z-index:2000!important;transform:translateX(105%);transition:transform .25s ease!important;overflow-y:auto!important;background:linear-gradient(180deg,#0d121b,#070a0f)!important;box-shadow:-20px 0 60px rgba(0,0,0,.4)!important;padding:78px 14px 20px!important}
+ .side.mobile-open{transform:translateX(0)}
+ .mobile-menu-btn{display:grid;place-items:center;position:fixed;right:13px;top:13px;width:46px;height:46px;border-radius:14px;border:1px solid rgba(229,189,91,.28);background:rgba(10,14,21,.94);color:#e5bd5b;font-size:22px;z-index:2100;box-shadow:0 10px 30px rgba(0,0,0,.3)}
+ .mobile-nav-shade{position:fixed;inset:0;background:rgba(0,0,0,.58);backdrop-filter:blur(3px);z-index:1990;opacity:0;pointer-events:none;transition:.2s}.mobile-nav-shade.show{opacity:1;pointer-events:auto}
+ .top{padding-right:70px!important}
+ .nav{position:static!important;display:flex!important;flex-direction:column!important;overflow:visible!important;background:transparent!important;border:0!important;box-shadow:none!important;padding:0!important;margin:0!important}
+ .nav button{width:100%!important;text-align:right!important;margin:4px 0!important;min-height:46px!important}
+ .wrap,.main{padding:18px 13px 70px!important}
+}
+</style></html>
