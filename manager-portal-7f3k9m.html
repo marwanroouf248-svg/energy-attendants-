@@ -147,8 +147,10 @@ async function api(action,body={},retry=true){
   }
 }
 async function approvalApi(action,body={},retry=true){
+  const managerActions=new Set(['manager_requests','manager_decide','manager_action','manager_manual_attendance','manager_delete_attendance']);
+  const endpoint=managerActions.has(action)?MANAGER_API:APPROVAL_F;
   try{
-    return await fetchJson(APPROVAL_F,{method:'POST',headers:{'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},body:JSON.stringify({action,...body})});
+    return await fetchJson(endpoint,{method:'POST',headers:{'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},body:JSON.stringify({action,...body})});
   }catch(e){
     if(retry&&token&&String(e.message).includes('غير مصرح')){
       if(await refreshManagerSession()) return approvalApi(action,body,false);
