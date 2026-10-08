@@ -336,53 +336,99 @@ function renderAccountRows(){document.getElementById('accountRows').innerHTML=hr
 function editPerms(id){let a=hrAccounts.find(x=>x.id===id);if(!a)return;document.getElementById('modalContent').innerHTML='<h2>🔐 صلاحيات '+esc(a.username)+'</h2><p class="mini">علم فقط على الخانات التي تريد ظهورها للموظف.</p><div id="editPerms">'+permChecksHtml(a.permissions||{})+'</div><button class="btn green" style="margin-top:14px" onclick="savePerms(\''+a.id+'\')">حفظ الصلاحيات</button>';document.getElementById('modal').classList.add('show')}
 async function savePerms(id){let o={};document.querySelectorAll('#editPerms .perm').forEach(x=>o[x.dataset.k]=x.checked);try{await hrApi('update_permissions',{id,permissions:o});closeModal();loadAccountUI();toast('تم تحديث الصلاحيات')}catch(e){alert(e.message)}}
 hrBoot().then(async()=>{await loadRealHRData();await refreshHRModules();await loadCoachCenter()}).catch(e=>{console.error(e);location.href='./hr-login.html'});
-</script><script>async function logoutHR(){try{if(typeof HR_AUTH!=='undefined')await HR_AUTH.auth.signOut();}catch(e){console.error(e)}sessionStorage.clear();localStorage.removeItem('supabase.auth.token');location.href='./';}</script><script>
-(function(){
- function setupMobileNav(){
-   if(window.innerWidth>1000||document.getElementById('mobileMenuToggle'))return;
-   const b=document.createElement('button');b.id='mobileMenuToggle';b.className='mobile-menu-toggle';b.type='button';b.setAttribute('aria-label','فتح القائمة');b.textContent='☰';
-   const shade=document.createElement('div');shade.className='mobile-menu-backdrop';shade.id='mobileMenuBackdrop';
-   document.body.appendChild(shade);document.body.appendChild(b);
-   const side=document.querySelector('.side');
-   const close=()=>{side?.classList.remove('open');shade.classList.remove('show');b.textContent='☰'};
-   const open=()=>{side?.classList.add('open');shade.classList.add('show');b.textContent='✕'};
-   b.onclick=()=>side?.classList.contains('open')?close():open();
-   shade.onclick=close;
-   document.querySelectorAll('.side .nav button').forEach(x=>x.addEventListener('click',close));
-   document.querySelector('.side .logout-btn')?.addEventListener('click',close);
- }
- window.addEventListener('resize',()=>{if(window.innerWidth>1000){document.querySelector('.side')?.classList.remove('open');document.getElementById('mobileMenuBackdrop')?.classList.remove('show')}});
- document.addEventListener('DOMContentLoaded',setupMobileNav);
-})();
-</script><script>
-(function(){
-  function mobileNav(){
-    if(window.innerWidth>1000)return;
-    var side=document.querySelector(".side"); if(!side||document.getElementById("mobileMenuBtn"))return;
-    var btn=document.createElement("button");btn.id="mobileMenuBtn";btn.className="mobile-menu-btn";btn.innerHTML="☰";btn.setAttribute("aria-label","فتح القائمة");
-    var shade=document.createElement("div");shade.id="mobileNavShade";shade.className="mobile-nav-shade";
-    document.body.append(btn,shade);
-    function close(){side.classList.remove("mobile-open");shade.classList.remove("show");document.body.classList.remove("nav-open");btn.innerHTML="☰"}
-    btn.onclick=function(){var open=!side.classList.contains("mobile-open");side.classList.toggle("mobile-open",open);shade.classList.toggle("show",open);document.body.classList.toggle("nav-open",open);btn.innerHTML=open?"✕":"☰"};
-    shade.onclick=close;
-    side.querySelectorAll("button").forEach(function(x){x.addEventListener("click",function(){setTimeout(close,80)})});
+</script><script>async function logoutHR(){try{if(typeof HR_AUTH!=='undefined')await HR_AUTH.auth.signOut();}catch(e){console.error(e)}sessionStorage.clear();localStorage.removeItem('supabase.auth.token');location.href='./';}<style>
+/* Energy System — stable responsive navigation */
+@media(max-width:1000px){
+  html,body{overflow-x:hidden}
+  body.nav-locked{overflow:hidden!important}
+  .side{
+    position:fixed!important;right:0!important;left:auto!important;top:0!important;bottom:0!important;
+    width:min(310px,88vw)!important;height:100dvh!important;z-index:3000!important;
+    transform:translateX(105%)!important;transition:transform .24s ease!important;
+    overflow-y:auto!important;-webkit-overflow-scrolling:touch!important;
+    box-shadow:-24px 0 60px rgba(0,0,0,.48)!important;
   }
-  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",mobileNav);else mobileNav();
-  window.addEventListener("resize",function(){if(window.innerWidth>1000){document.querySelector(".side")?.classList.remove("mobile-open");document.querySelector(".mobile-nav-shade")?.classList.remove("show");document.querySelector(".mobile-menu-btn")?.remove();}else mobileNav();});
+  .side.mobile-open{transform:translateX(0)!important}
+  .mobile-menu-btn{
+    display:grid;place-items:center;position:fixed;right:14px;top:12px;
+    width:46px;height:46px;border-radius:14px;border:1px solid rgba(229,189,91,.28);
+    background:linear-gradient(135deg,#e5bd5b,#a87821);color:#111;font-size:22px;
+    z-index:3100;box-shadow:0 10px 30px rgba(0,0,0,.32);cursor:pointer;
+  }
+  .mobile-nav-shade{
+    position:fixed;inset:0;background:rgba(0,0,0,.58);backdrop-filter:blur(3px);
+    z-index:2990;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .2s ease;
+  }
+  .mobile-nav-shade.show{opacity:1;visibility:visible;pointer-events:auto}
+  .side .nav{display:flex!important;flex-direction:column!important;gap:6px!important}
+  .side .nav button{width:100%!important;min-height:46px!important;margin:0!important}
+  .side .logout-btn{width:100%!important;min-height:46px!important}
+}
+@media(min-width:1001px){
+  .mobile-menu-btn,.mobile-nav-shade{display:none!important}
+}
+</style>
+<script>
+(function(){
+  function setupMobileNav(){
+    var side=document.querySelector('.side');
+    if(!side)return;
+    var old=document.getElementById('mobileMenuBtn');
+    var shade=document.querySelector('.mobile-nav-shade');
+    if(window.innerWidth>1000){
+      side.classList.remove('mobile-open');
+      document.body.classList.remove('nav-locked');
+      if(old)old.remove();
+      if(shade)shade.remove();
+      return;
+    }
+    if(!old){
+      old=document.createElement('button');
+      old.id='mobileMenuBtn';
+      old.className='mobile-menu-btn';
+      old.type='button';
+      old.textContent='☰';
+      old.setAttribute('aria-label','فتح القائمة');
+      old.setAttribute('aria-expanded','false');
+      document.body.appendChild(old);
+      old.onclick=function(){
+        var open=!side.classList.contains('mobile-open');
+        side.classList.toggle('mobile-open',open);
+        if(shade)shade.classList.toggle('show',open);
+        document.body.classList.toggle('nav-locked',open);
+        old.textContent=open?'✕':'☰';
+        old.setAttribute('aria-expanded',String(open));
+        old.setAttribute('aria-label',open?'إغلاق القائمة':'فتح القائمة');
+      };
+    }
+    if(!shade){
+      shade=document.createElement('div');
+      shade.className='mobile-nav-shade';
+      shade.id='mobileNavShade';
+      document.body.insertBefore(shade,document.body.firstChild);
+      shade.onclick=closeMobileNav;
+    }
+    function closeMobileNav(){
+      side.classList.remove('mobile-open');
+      shade.classList.remove('show');
+      document.body.classList.remove('nav-locked');
+      var b=document.getElementById('mobileMenuBtn');
+      if(b){b.textContent='☰';b.setAttribute('aria-expanded','false');b.setAttribute('aria-label','فتح القائمة');}
+    }
+    side.querySelectorAll('.nav button,.logout-btn').forEach(function(x){
+      if(!x.dataset.mobileNavBound){
+        x.dataset.mobileNavBound='1';
+        x.addEventListener('click',function(){setTimeout(closeMobileNav,80);});
+      }
+    });
+    if(!window.__energyNavKeys){
+      window.__energyNavKeys=true;
+      document.addEventListener('keydown',function(e){if(e.key==='Escape')closeMobileNav();});
+    }
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',setupMobileNav);
+  else setupMobileNav();
+  window.addEventListener('resize',setupMobileNav);
 })();
 </script>
-</body><style>
-/* Premium Energy System navigation + responsive mobile drawer */
-.mobile-menu-btn{display:none}
-@media(max-width:1000px){
-  body{overflow-x:hidden}
-  .side{position:fixed!important;right:0!important;top:0!important;bottom:0!important;width:min(310px,88vw)!important;height:100dvh!important;z-index:2000!important;transform:translateX(105%);transition:transform .25s ease;overflow-y:auto!important;padding:18px 14px 24px!important;background:linear-gradient(180deg,#0d121b,#070a0f)!important;box-shadow:-20px 0 60px rgba(0,0,0,.35)!important}
-  .side.mobile-open{transform:translateX(0)}
-  .mobile-menu-btn{display:grid;place-items:center;position:fixed;right:14px;top:14px;width:46px;height:46px;border-radius:14px;border:1px solid rgba(229,189,91,.25);background:rgba(10,14,21,.92);color:#e5bd5b;font-size:22px;z-index:2100;box-shadow:0 10px 30px rgba(0,0,0,.28);backdrop-filter:blur(14px)}
-  .mobile-nav-shade{position:fixed;inset:0;background:rgba(0,0,0,.58);backdrop-filter:blur(3px);z-index:1990;opacity:0;pointer-events:none;transition:.2s}.mobile-nav-shade.show{opacity:1;pointer-events:auto}
-  .main{padding:78px 14px 18px!important}
-  body.nav-open{overflow:hidden}
-  .top{padding-right:58px!important}
-}
-@media(max-width:600px){.mobile-menu-btn{right:12px;top:12px}.main{padding-top:70px!important}.panel{padding:15px!important}.btn{min-height:44px}}
-</style></html>
+</body></html>
