@@ -44,4 +44,105 @@ async function importExcel(){if(!can('sales_import'))return toast('ليس لدي
 async function saveMyTarget(){let month=new Date();month.setDate(1);let monthStart=month.toISOString().slice(0,10),subsTarget=Number(document.getElementById('targetSubs').value||0),revTarget=Number(document.getElementById('targetRevenue').value||0),targetUser=document.getElementById('targetRep')?.value||me.id;if(!targetUser)return toast('اختار موظف السيلز');if(!isManager&&targetUser!==me.id)return toast('غير مسموح');let r=await db.from('sales_monthly_targets').upsert({sales_user_id:targetUser,month_start:monthStart,target_subscriptions:subsTarget,target_revenue:revTarget},{onConflict:'sales_user_id,month_start'});if(r.error)return toast(r.error.message);toast('تم حفظ التارجت');renderPerformance()}async function renderPerformance(){let branch=document.getElementById('perfBranch')?.value||'all',month=new Date();document.getElementById('targetRep').innerHTML='<option value="">الموظف</option>'+reps.filter(x=>x.role==='sales_staff').map(x=>'<option value="'+x.id+'">'+esc(x.full_name||'Sales')+'</option>').join('');if(!isManager){document.getElementById('targetRep').value=me.id;document.getElementById('targetRep').disabled=true}else document.getElementById('targetRep').disabled=false;month.setDate(1);let ms=month.toISOString().slice(0,10),meals=leads.filter(x=>{let d=new Date(x.closed_at||x.updated_at||x.created_at);return x.conversion_status==='won'&&d.getFullYear()===month.getFullYear()&&d.getMonth()===month.getMonth()&&(branch==='all'||x.branch===branch)}),targets=await db.from('sales_monthly_targets').select('*').eq('month_start',ms),map={};reps.filter(x=>x.role==='sales_staff').forEach(r=>map[r.id]={id:r.id,name:r.full_name||'Sales',wins:0,rev:0,targetSubs:0,targetRev:0});(targets.data||[]).forEach(t=>{if(map[t.sales_user_id]){map[t.sales_user_id].targetSubs=Number(t.target_subscriptions||0);map[t.sales_user_id].targetRev=Number(t.target_revenue||0)}});meals.forEach(x=>{let id=x.user_id;if(!map[id])return;map[id].wins++;map[id].rev+=Number(x.close_revenue||0)});let rows=Object.values(map).map(x=>{let att=x.targetRev?x.rev/x.targetRev*100:0;let subAtt=x.targetSubs?x.wins/x.targetSubs*100:0;let score=Math.round((Math.min(att,150)*.7)+(Math.min(subAtt,150)*.3));let rate=Number(document.getElementById('commissionRate')?.value||0);return {...x,att,subAtt,score,commission:x.rev*rate/100}}).sort((a,b)=>b.score-a.score);let mine=map[me.id]||{targetSubs:0,targetRev:0,wins:0,rev:0};document.getElementById('pTargetSubs').textContent=mine.targetSubs;document.getElementById('pActualSubs').textContent=mine.wins;document.getElementById('pTargetRev').textContent=mine.targetRev.toLocaleString('ar-EG')+' ج';document.getElementById('pActualRev').textContent=mine.rev.toLocaleString('ar-EG')+' ج';document.getElementById('pAttain').textContent=Math.round(mine.targetRev?mine.rev/mine.targetRev*100:0)+'%';document.getElementById('pCommission').textContent=Math.round(mine.rev*Number(document.getElementById('commissionRate')?.value||0)/100).toLocaleString('ar-EG')+' ج';document.getElementById('leaderboard').innerHTML=rows.map((x,i)=>'<div class="row"><b>#'+(i+1)+' '+esc(x.name)+'</b><br><small>Revenue: '+x.rev.toLocaleString('ar-EG')+' ج • اشتراكات: '+x.wins+' • Target: '+Math.round(x.att)+'% • Score: '+x.score+' • Commission: '+Math.round(x.commission).toLocaleString('ar-EG')+' ج</small></div>').join('')||'<div class="empty">لا يوجد Sales نشطين</div>'} function tab(id,b){document.querySelectorAll('main section').forEach(s=>s.style.display='none');document.getElementById(id).style.display='block';document.querySelectorAll('.nav button').forEach(x=>x.classList.remove('active'));b?.classList.add('active');if(id==='today')today();if(id==='renewals')renewals();if(id==='reports')report()}
 function showM(){document.getElementById('modal').classList.add('show')}function closeM(){document.getElementById('modal').classList.remove('show')}
 load();
+</script>
+<script>
+(function(){
+  function ensureUpgradeUI(){
+    var p=document.getElementById("performance");
+    if(!p)return;
+    p.innerHTML='<div class="panel"><h2>🏆 Targets + Leaderboard + Commission + Sales Score</h2>'+
+      '<div class="filters"><select class="field" id="perfBranch"><option value="all">كل الفروع</option><option>فرع الولاد</option><option>فرع البنات</option></select><select class="field" id="targetRep"><option value="">الموظف</option></select><input class="field" id="targetSubs" type="number" min="0" placeholder="هدف الاشتراكات"><input class="field" id="targetRevenue" type="number" min="0" placeholder="هدف الإيراد"><button class="btn gold" onclick="saveMyTarget()">حفظ التارجت</button></div>'+
+      '<div class="cards"><div class="card"><div class="muted">هدف الاشتراكات</div><div class="metric" id="pTargetSubs">0</div></div><div class="card"><div class="muted">الاشتراكات</div><div class="metric" id="pActualSubs">0</div></div><div class="card"><div class="muted">هدف الإيراد</div><div class="metric" id="pTargetRev">0</div></div><div class="card"><div class="muted">الإيراد</div><div class="metric" id="pActualRev">0</div></div><div class="card"><div class="muted">تحقيق الإيراد</div><div class="metric" id="pAttain">0%</div></div><div class="card"><div class="muted">Sales Score</div><div class="metric" id="pScore">0/100</div></div><div class="card"><div class="muted">العمولة</div><div class="metric" id="pCommission">0 ج</div></div></div>'+
+      '<h3>🥇 Leaderboard</h3><div class="tablewrap"><table class="table"><thead><tr><th>#</th><th>السيلز</th><th>Revenue</th><th>اشتراكات</th><th>تحقيق</th><th>Conversion</th><th>Score</th><th>Commission</th></tr></thead><tbody id="leaderboard"></tbody></table></div>'+
+      '<div class="panel"><h3>💰 شرائح العمولة</h3><div class="filters"><input class="field" id="tierName" placeholder="اسم الشريحة"><input class="field" id="tierMin" type="number" step=".01" placeholder="من %"><input class="field" id="tierMax" type="number" step=".01" placeholder="إلى %"><input class="field" id="tierRate" type="number" step=".01" placeholder="نسبة العمولة"><input class="field" id="tierFixed" type="number" step=".01" placeholder="مكافأة لكل اشتراك"><input class="field" id="tierBranch" placeholder="الفرع أو اتركه فارغًا"><button class="btn gold" onclick="saveCommissionRule()">حفظ الشريحة</button></div><div id="commissionRules"></div></div>'+
+      '<div class="panel"><h3>🧾 كشف العمولات</h3><div class="tablewrap"><table class="table"><thead><tr><th>السيلز</th><th>الشهر</th><th>Revenue</th><th>تحقيق</th><th>Score</th><th>الشريحة</th><th>العمولة</th><th>الحالة</th><th>إجراء</th></tr></thead><tbody id="commissionRows"></tbody></table></div></div>'+
+      '<div class="panel"><h3>🏆 مكافآت Rank</h3><div class="tablewrap"><table class="table"><thead><tr><th>المحيل</th><th>العميل</th><th>الشهور</th><th>الحالة</th><th>إجراء</th></tr></thead><tbody id="rankRows"></tbody></table></div></div>'+
+      '<p class="muted">Sales Score = 40 تحقيق الإيراد + 25 تحقيق الاشتراكات + 15 التحويل + 10 الالتزام بالمتابعة + 10 جودة الاتصال.</p></div>';
+  }
+  var oldLoad=window.load;
+  window.load=async function(){
+    var r=await oldLoad();
+    ensureUpgradeUI();
+    if(typeof renderPerformance==="function" && can("sales_leaderboard")) renderPerformance();
+    if(typeof loadSalesNotifications==="function") loadSalesNotifications();
+    return r;
+  };
+  window.saveMyTarget=async function(){
+    if(!can("sales_manage_targets"))return toast("ليس لديك صلاحية التارجت");
+    var d=new Date();d.setDate(1);
+    var ms=d.toISOString().slice(0,10),uid=document.getElementById("targetRep").value||me.id;
+    if(!isManager&&uid!==me.id)return toast("غير مسموح");
+    var r=await db.from("sales_monthly_targets").upsert({sales_user_id:uid,month_start:ms,target_subscriptions:Number(document.getElementById("targetSubs").value||0),target_revenue:Number(document.getElementById("targetRevenue").value||0)},{onConflict:"sales_user_id,month_start"});
+    if(r.error)return toast(r.error.message);
+    toast("تم حفظ التارجت");renderPerformance();
+  };
+  window.salesRules=[];
+  window.pickCommissionRule=function(att,branch){
+    return (window.salesRules||[]).filter(function(x){return (!x.branch||x.branch===branch)&&att>=Number(x.min_attainment||0)&&(x.max_attainment==null||att<=Number(x.max_attainment));}).sort(function(a,b){return Number(b.min_attainment)-Number(a.min_attainment);})[0]||null;
+  };
+  window.renderPerformance=async function(){
+    if(!can("sales_leaderboard"))return;
+    ensureUpgradeUI();
+    var branch=document.getElementById("perfBranch")?.value||"all",d=new Date();d.setDate(1);var ms=d.toISOString().slice(0,10);
+    var repList=reps.filter(function(x){return x.role==="sales_staff";});
+    document.getElementById("targetRep").innerHTML='<option value="">الموظف</option>'+repList.map(function(x){return '<option value="'+x.id+'">'+esc(x.full_name||"Sales")+'</option>';}).join("");
+    document.getElementById("targetRep").disabled=!isManager;if(!isManager)document.getElementById("targetRep").value=me.id;
+    var tr=await db.from("sales_monthly_targets").select("*").eq("month_start",ms);
+    var rr=await db.from("sales_commission_rules").select("*").eq("active",true).order("min_attainment");
+    if(rr.error)return toast(rr.error.message);window.salesRules=rr.data||[];
+    var map={};repList.forEach(function(x){map[x.id]={id:x.id,name:x.full_name||"Sales",branch:x.branch||"",wins:0,rev:0,total:0,contacted:0,answered:0,followDue:0,followDone:0,targetSubs:0,targetRev:0};});
+    (tr.data||[]).forEach(function(x){if(map[x.sales_user_id]){map[x.sales_user_id].targetSubs=Number(x.target_subscriptions||0);map[x.sales_user_id].targetRev=Number(x.target_revenue||0);}});
+    leads.filter(function(x){return branch==="all"||x.branch===branch;}).forEach(function(x){
+      var id=x.assigned_to||x.user_id;if(!map[id])return;map[id].total++;
+      if(x.last_contacted_at)map[id].contacted++;if(x.last_call_answered)map[id].answered++;
+      if(x.next_follow_up_at){map[id].followDue++;if(x.follow_up_completed_at)map[id].followDone++;}
+      var z=new Date(x.closed_at||x.updated_at||x.created_at);
+      if(x.conversion_status==="won"&&z.getFullYear()===d.getFullYear()&&z.getMonth()===d.getMonth()){map[id].wins++;map[id].rev+=Number(x.close_revenue||0);}
+    });
+    var rows=Object.values(map).map(function(x){
+      x.att=x.targetRev?x.rev/x.targetRev*100:0;x.subAtt=x.targetSubs?x.wins/x.targetSubs*100:0;x.conv=x.total?x.wins/x.total*100:0;
+      x.followRate=x.followDue?Math.min(1,x.followDone/x.followDue):1;x.contactRate=x.contacted?Math.min(1,x.answered/x.contacted):0;
+      x.score=Math.round(Math.min(100,Math.max(0,Math.min(x.att,150)/150*40+Math.min(x.subAtt,150)/150*25+Math.min(x.conv,100)/100*15+x.followRate*10+x.contactRate*10)));
+      x.rule=pickCommissionRule(x.att,x.branch);x.commission=x.rule?x.rev*Number(x.rule.rate_percent||0)/100+x.wins*Number(x.rule.fixed_per_win||0):0;return x;
+    }).sort(function(a,b){return b.score-a.score;});
+    window._salesScoreMap={};rows.forEach(function(x){window._salesScoreMap[x.id]=x;});
+    var mine=map[me.id]||{targetSubs:0,targetRev:0,wins:0,rev:0,score:0,commission:0};
+    document.getElementById("pTargetSubs").textContent=mine.targetSubs;document.getElementById("pActualSubs").textContent=mine.wins;document.getElementById("pTargetRev").textContent=Number(mine.targetRev).toLocaleString("ar-EG")+" ج";document.getElementById("pActualRev").textContent=Number(mine.rev).toLocaleString("ar-EG")+" ج";document.getElementById("pAttain").textContent=Math.round(mine.targetRev?mine.rev/mine.targetRev*100:0)+"%";
+    var mineRow=rows.find(function(x){return x.id===me.id;})||mine;document.getElementById("pScore").textContent=(mineRow.score||0)+"/100";document.getElementById("pCommission").textContent=Math.round(mineRow.commission||0).toLocaleString("ar-EG")+" ج";
+    document.getElementById("leaderboard").innerHTML=rows.map(function(x,i){return "<tr><td>#"+(i+1)+"</td><td><b>"+esc(x.name)+"</b></td><td>"+Math.round(x.rev).toLocaleString("ar-EG")+" ج</td><td>"+x.wins+"</td><td>"+Math.round(x.att)+"%</td><td>"+Math.round(x.conv)+"%</td><td>"+x.score+"/100</td><td>"+Math.round(x.commission).toLocaleString("ar-EG")+" ج</td></tr>";}).join("")||'<tr><td colspan="8" class="empty">لا يوجد Sales نشطين</td></tr>';
+    document.getElementById("commissionRules").innerHTML=window.salesRules.map(function(x){return '<div class="row"><b>'+esc(x.name)+'</b> • '+x.min_attainment+"%"+(x.max_attainment!=null?" - "+x.max_attainment+"%":"+")+" • "+x.rate_percent+"% + "+Number(x.fixed_per_win||0)+" ج لكل اشتراك"+(isManager?' <button class="btn" onclick="deleteCommissionRule(\''+x.id+'\')">حذف</button>':"")+"</div>";}).join("")||'<div class="empty">لا توجد شرائح</div>';
+    if(isManager)await persistCommissionPeriods(rows,ms);
+    await loadCommissionPeriods();await loadRankRewards();
+  };
+  window.saveCommissionRule=async function(){
+    if(!can("sales_commission_rules"))return toast("هذه الصلاحية للإدارة فقط");
+    var name=document.getElementById("tierName").value.trim();if(!name)return toast("اكتب اسم الشريحة");
+    var r=await db.from("sales_commission_rules").insert({name:name,min_attainment:Number(document.getElementById("tierMin").value||0),max_attainment:document.getElementById("tierMax").value===""?null:Number(document.getElementById("tierMax").value),rate_percent:Number(document.getElementById("tierRate").value||0),fixed_per_win:Number(document.getElementById("tierFixed").value||0),branch:document.getElementById("tierBranch").value.trim()||null,active:true});
+    if(r.error)return toast(r.error.message);toast("تم حفظ شريحة العمولة");renderPerformance();
+  };
+  window.deleteCommissionRule=async function(id){if(!can("sales_commission_rules"))return;var r=await db.from("sales_commission_rules").update({active:false}).eq("id",id);if(r.error)return toast(r.error.message);renderPerformance();};
+  window.persistCommissionPeriods=async function(rows,ms){
+    for(var i=0;i<rows.length;i++){var x=rows[i];var r=await db.from("sales_commission_periods").upsert({sales_user_id:x.id,month_start:ms,branch:x.branch,target_revenue:x.targetRev,target_subscriptions:x.targetSubs,actual_revenue:x.rev,actual_wins:x.wins,attainment_percent:x.att,revenue_attainment:x.att,subscription_attainment:x.subAtt,conversion_rate:x.conv,followup_score:x.followRate*100,contact_score:x.contactRate*100,sales_score:x.score,rate_percent:x.rule?x.rule.rate_percent:0,fixed_bonus:x.rule?x.rule.fixed_per_win*x.wins:0,tier_name:x.rule?.name||null,commission_amount:x.commission,status:"calculated"},{onConflict:"sales_user_id,month_start"});if(r.error)console.error(r.error);}
+  };
+  window.loadCommissionPeriods=async function(){
+    if(!can("sales_commission_view")){document.getElementById("commissionRows").innerHTML='<tr><td colspan="9" class="empty">لا توجد صلاحية عرض العمولات</td></tr>';return;}
+    var q=db.from("sales_commission_periods").select("*").order("month_start",{ascending:false}).limit(100);if(!isManager)q=q.eq("sales_user_id",me.id);var r=await q;if(r.error)return;
+    document.getElementById("commissionRows").innerHTML=(r.data||[]).map(function(x){return "<tr><td>"+esc(reps.find(function(v){return v.id===x.sales_user_id;})?.full_name||x.sales_user_id)+"</td><td>"+x.month_start+"</td><td>"+Number(x.actual_revenue||0).toLocaleString("ar-EG")+" ج</td><td>"+Math.round(x.revenue_attainment||0)+"%</td><td>"+Math.round(x.sales_score||0)+"</td><td>"+esc(x.tier_name||"—")+"</td><td>"+Number(x.commission_amount||0).toLocaleString("ar-EG")+" ج</td><td>"+esc(x.status||"calculated")+"</td><td>"+(isManager&&x.status!=="paid"?' <button class="btn" onclick="approveCommission(\''+x.id+'\')">اعتماد</button> <button class="btn" onclick="payCommission(\''+x.id+'\')">تم الدفع</button>':"—")+"</td></tr>";}).join("")||'<tr><td colspan="9" class="empty">لا توجد كشوف</td></tr>';
+  };
+  window.approveCommission=async function(id){if(!can("sales_commission_approve"))return toast("ليس لديك صلاحية الاعتماد");var r=await db.from("sales_commission_periods").update({status:"approved",approved_by:me.id,approved_at:new Date().toISOString()}).eq("id",id);if(r.error)return toast(r.error.message);loadCommissionPeriods();};
+  window.payCommission=async function(id){if(!can("sales_commission_approve"))return toast("ليس لديك صلاحية الصرف");var r=await db.from("sales_commission_periods").update({status:"paid",paid_at:new Date().toISOString()}).eq("id",id);if(r.error)return toast(r.error.message);loadCommissionPeriods();};
+  window.loadRankRewards=async function(){
+    var box=document.getElementById("rankRows");if(!box)return;if(!can("sales_rank_rewards")){box.innerHTML='<tr><td colspan="5" class="empty">لا توجد صلاحية Rank</td></tr>';return;}
+    var q=db.from("sales_rank_rewards").select("*").order("created_at",{ascending:false}).limit(100);if(!isManager)q=q.eq("referrer_user_id",me.id);var r=await q;if(r.error)return;
+    box.innerHTML=(r.data||[]).map(function(x){return "<tr><td>"+esc(x.referrer_user_id||"—")+"</td><td>"+esc(x.referred_customer_name||"—")+"</td><td>"+x.reward_months+"</td><td>"+esc(x.status)+"</td><td>"+(isManager&&x.status==="eligible"?' <button class="btn" onclick="applyRankReward(\''+x.id+'\')">اعتماد</button>':"—")+"</td></tr>";}).join("")||'<tr><td colspan="5" class="empty">لا توجد مكافآت</td></tr>';
+  };
+  window.applyRankReward=async function(id){if(!can("sales_rank_rewards"))return;var r=await db.from("sales_rank_rewards").update({status:"applied",applied_at:new Date().toISOString(),applied_by:me.id}).eq("id",id).eq("status","eligible");if(r.error)return toast(r.error.message);loadRankRewards();};
+  window.undoImport=async function(id){if(!isManager||!can("sales_import_undo"))return toast("للإدارة فقط");if(!confirm("سيتم أرشفة كل العملاء المستوردين في هذه الدفعة. هل تريد المتابعة؟"))return;var r=await db.from("leads").update({archived_at:new Date().toISOString(),archived_by:me.id}).eq("import_batch_id",id).is("archived_at",null);if(r.error)return toast(r.error.message);await db.from("lead_import_batches").update({archived_at:new Date().toISOString(),archived_by:me.id}).eq("id",id);toast("تمت أرشفة الدفعة");load();};
+  window.loadImportHistory=async function(){var r=await db.from("lead_import_batches").select("*").order("created_at",{ascending:false}).limit(20);var box=document.getElementById("importHistory");if(!box)return;box.innerHTML=r.error?'<div class="empty">'+esc(r.error.message)+"</div>":(r.data||[]).map(function(x){return '<div class="row"><b>'+esc(x.file_name)+'</b><br><small>'+x.imported_rows+" مستورد • "+x.duplicate_rows+" مكرر • "+x.failed_rows+" فشل • "+dt(x.created_at)+"</small>"+(isManager&&!x.archived_at?' <br><button class="btn" onclick="undoImport(\''+x.id+'\')">↩️ أرشفة الاستيراد</button>':"")+(x.archived_at?"<br><small>تمت الأرشفة "+dt(x.archived_at)+"</small>":"")+"</div>";}).join("")||'<div class="empty">لا توجد استيرادات</div>';};
+  window.loadSalesNotifications=async function(){if(!can("sales_notifications"))return;var r=await db.from("sales_notifications").select("*").order("created_at",{ascending:false}).limit(100);if(r.error)return;salesNotifs=r.data||[];var unread=salesNotifs.filter(function(x){return !x.read_at;}).length;var b=document.getElementById("notifBadge");if(b)b.textContent=unread;var box=document.getElementById("notificationsList");if(box)box.innerHTML=salesNotifs.map(function(x){return '<div class="row"><b>'+esc(x.title)+'</b><br><small>'+esc(x.body||"")+" • "+dt(x.due_at||x.created_at)+"</small>"+(!x.read_at?' <br><button class="btn" onclick="readSalesNotification(\''+x.id+'\')">تمت المتابعة</button>':" <br><small>✓ تمت المتابعة</small>")+"</div>";}).join("")||'<div class="empty">لا توجد إشعارات</div>';};
+  window.readSalesNotification=async function(id){var r=await db.from("sales_notifications").update({read_at:new Date().toISOString()}).eq("id",id).eq("user_id",me.id);if(r.error)return toast(r.error.message);loadSalesNotifications();};
+  var oldTab=window.tab;
+  window.tab=function(id,b){if(id==="performance")ensureUpgradeUI();if(id==="notifications")loadSalesNotifications();oldTab(id,b);if(id==="performance")renderPerformance();};
+  setTimeout(function(){ensureUpgradeUI();if(typeof loadSalesNotifications==="function")loadSalesNotifications();},1200);
+})();
 </script></body></html>
