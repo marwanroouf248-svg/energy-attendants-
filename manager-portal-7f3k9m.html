@@ -197,7 +197,13 @@ function renderManagerBranches(names,selected){
 }
 function selectedManagerBranches(){return Array.from(document.querySelectorAll('#managerBranchChecks input[data-branch]:checked')).map(x=>x.getAttribute('data-branch')).filter(Boolean)}
 function selectedManagerPermissions(){const p={};document.querySelectorAll('#managerPermissionChecks input[data-permission]').forEach(x=>p[x.getAttribute('data-permission')]=x.checked);return p}
-function fillManagerPermissions(p){document.querySelectorAll('#managerPermissionChecks input[data-permission]').forEach(x=>{const k=x.getAttribute('data-permission');x.checked=p?.[k]!==undefined?p[k]===true:hasAccess(k)})}
+function fillManagerPermissions(p){
+ const legacyParent={report_filter_dates:'view_reports',report_filter_branch:'view_reports',report_filter_department:'view_reports',report_filter_employees:'view_reports',report_export_csv:'view_reports',report_export_pdf:'view_reports',view_break_report:'view_reports',view_attendance_rates:'view_reports',rate_export_csv:'view_reports',rate_export_pdf:'view_reports',manual_check_in:'manage_attendance',manual_check_out:'manage_attendance',manual_break_start:'manage_attendance',manual_break_end:'manage_attendance',manual_day_edit:'manage_attendance'};
+ document.querySelectorAll('#managerPermissionChecks input[data-permission]').forEach(x=>{
+  const k=x.getAttribute('data-permission');
+  x.checked=p?.[k]!==undefined?p[k]===true:(legacyParent[k]?p?.[legacyParent[k]]===true:false);
+ });
+}
 function resetManagerAccountForm(){ $('managerEditId').value='';$('managerName').value='';$('managerEmail').value='';$('managerPassword').value='';fillManagerPermissions({view_live:true,view_reports:true,report_filter_dates:true,report_filter_branch:true,report_filter_department:true,report_filter_employees:true,report_export_csv:true,report_export_pdf:true,delete_attendance:true,view_employee_details:true,view_requests:true,view_break_report:true,view_attendance_rates:true,rate_export_csv:true,rate_export_pdf:true,manage_attendance:true,manual_check_in:true,manual_check_out:true,manual_break_start:true,manual_break_end:true,manual_day_edit:true,add_employee:false,manage_employee_permissions:false,view_telegram:true});document.querySelectorAll('#managerBranchChecks input').forEach(x=>x.checked=false);$('managerAccountMsg').textContent='نموذج إنشاء مدير جديد.'}
 function editManagerAccount(id){
   const m=managerAccountsCache.find(x=>x.id===id);if(!m)return;
