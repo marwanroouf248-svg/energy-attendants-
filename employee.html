@@ -135,7 +135,7 @@ function renderSelfAttendance(){
     '<div>'+(open?'<span class="pill green">● '+currentStatus+'</span>':'<span class="pill yellow">● '+currentStatus+'</span>')+'</div></div>'+
     branchSelector+
     '<div class="attendance-actions">'+
-    '<button class="btn goldbtn" data-attendance-mode="in" '+(open||pendingTypes.has("in")?'disabled':'')+' onclick="attendanceAction(\'in\')">'+(pendingTypes.has("in")?'⏳ طلب الدخول قيد المراجعة':'🟢 طلب تسجيل دخول')+'</button>'+
+    '<button class="btn goldbtn" data-attendance-mode="in" '+(open||pendingTypes.has("in")||ap.can_check_in===false?'disabled':'')+' onclick="attendanceAction(\'in\')">'+(pendingTypes.has("in")?'⏳ طلب الدخول قيد المراجعة':'🟢 طلب تسجيل دخول')+'</button>'+
     '<button class="btn" data-attendance-mode="break_start" '+(!open||pendingTypes.has("break_start")?'disabled':'')+' onclick="attendanceAction(\'break_start\')">'+(pendingTypes.has("break_start")?'⏳ طلب البريك قيد المراجعة':'☕ طلب بدء بريك')+'</button>'+
     '<button class="btn" data-attendance-mode="break_end" '+(!open||pendingTypes.has("break_end")?'disabled':'')+' onclick="attendanceAction(\'break_end\')">'+(pendingTypes.has("break_end")?'⏳ طلب إنهاء البريك قيد المراجعة':'▶️ طلب إنهاء بريك')+'</button>'+
     '<button class="btn dangerbtn" data-attendance-mode="out" '+(!open||pendingTypes.has("out")?'disabled':'')+' onclick="attendanceAction(\'out\')">'+(pendingTypes.has("out")?'⏳ طلب الانصراف قيد المراجعة':'🔴 طلب تسجيل انصراف')+'</button></div>'+
