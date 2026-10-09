@@ -656,6 +656,7 @@ async function loadReport(initial=false){
    html+='<tr><td><b>'+esc2(employeeName(r))+'</b><br><small>'+esc2(employeeDept(r))+'</small></td><td>'+esc2(employeeBranch(r))+'</td><td>'+esc2(fmtDate(r.check_in))+'</td><td>'+esc2(r.check_out?fmtDate(r.check_out):'—')+'</td><td>'+esc2(hoursNow(r).toFixed(2))+'</td><td>'+(r.check_out?'مغادر':'<span class="live-online">موجود • الساعات مستمرة</span>')+'</td><td><button class="danger" onclick="deleteAttendanceRecord(\''+esc2(r.id)+'\')">🗑️ حذف</button></td></tr>';
   }
   $('reportTable').innerHTML=html+'</tbody></table>';
+  applyManagerAccess();
  }catch(e){$('reportTable').innerHTML='<div class="empty">❌ '+esc2(e.message)+'</div>';}
 }
 function selectEmployeeDetail(id){$('detailEmployee').value=id;loadEmployeeDetails();scrollToSection('employeeDetailsPanel')}
