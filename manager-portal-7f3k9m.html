@@ -110,7 +110,7 @@ const SUPABASE_PUBLISHABLE_KEY='sb_publishable_mKftrB-itebmeA-bdtt6dw_Q3QnxH0_';
 const F=SUPABASE_URL+'/functions/v1/employee-kiosk';
 const MANAGER_API=SUPABASE_URL+'/functions/v1/manager-dashboard-api';
 const MANAGER_ACCESS_API=SUPABASE_URL+'/functions/v1/manager-access-api';
-let managerAccess={permissions:{},branches:[]},managerAccountsCache=[];let employeePermissionsLoaded=false,employeePermissionBranches=[];
+let managerAccess={permissions:{},branches:[]},managerAccountsCache=[];let employeePermissionsLoaded=false,employeePermissionBranches=[];let managerAdminPanelLoaded=false;
 async function managerAccessApi(action,body={},retry=true){
   try{return await fetchJson(MANAGER_ACCESS_API,{method:'POST',headers:{'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},body:JSON.stringify({action,...body})});}
   catch(e){if(retry&&token&&String(e.message).includes('غير مصرح')){if(await refreshManagerSession())return managerAccessApi(action,body,false)}throw e}
@@ -202,7 +202,8 @@ async function loadManagerAdminPanel(){
     renderManagerBranches(Array.from(names),[]);
     renderManagerDepartments(ds.departments||[]);
     renderManagerAccounts();
-  }catch(e){$('managerAccountMsg').textContent='❌ '+e.message}
+    managerAdminPanelLoaded=true;
+  }catch(e){managerAdminPanelLoaded=false;$('managerAccountMsg').textContent='❌ '+e.message}
 }
 function renderManagerBranches(names,selected){
   $('managerBranchChecks').innerHTML=names.map(n=>'<label class="access-check"><input type="checkbox" data-branch="'+esc(n)+'" '+(selected.includes(n)?'checked':'')+'><span>'+esc(n)+'</span></label>').join('')||'<div class="empty">لا توجد فروع.</div>';
@@ -412,7 +413,7 @@ let liveTimer=null;let liveRefreshing=false;function startLiveDashboard(){if(liv
   managerAccess.role=managerAccess.role||((managerAccess.branches||[]).includes('*')?'admin':'manager');
   dashboardEmployees=sj.employees||[];
   applyManagerAccess();
-  if(managerAccess.role==='admin'){loadManagerAdminPanel();if(!employeePermissionsLoaded)loadEmployeePermissionTable();}
+  if(managerAccess.role==='admin'){if(!managerAdminPanelLoaded)loadManagerAdminPanel();if(!employeePermissionsLoaded)loadEmployeePermissionTable();}
   dashboardRequests=sj.requests||[];
   dashboardBreaks=sj.breaks||[];
   dashboardBreakIds=new Set(dashboardBreaks.filter(x=>!x.ended_at).map(x=>x.employee_id));
