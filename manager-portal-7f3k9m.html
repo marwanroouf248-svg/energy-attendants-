@@ -582,13 +582,29 @@ async function loadReport(initial=false){
   if(initial){if(!$('from').value)$('from').value=cairoDate();if(!$('to').value)$('to').value=cairoDate();}
   const body={from:$('from').value,to:$('to').value};
   const j=await api('manager_report',body);
-  const rs=filterAttendanceRows(j.rows||[],'report');reportRows=rs;
+  const rs=filterAttendanceRows(j.rows||[],'report');
+  const employeeInfo=id=>dashboardEmployees.find(e=>e.id===id)||{};
+  const employeeName=r=>r.profiles?.full_name||employeeInfo(r.employee_id).full_name||'موظف بدون اسم';
+  const employeeBranch=r=>r.branch||r.profiles?.branch||employeeInfo(r.employee_id).branch||'—';
+  const employeeDept=r=>r.profiles?.department||employeeInfo(r.employee_id).department||'—';
   const hoursNow=r=>{const start=new Date(r.check_in).getTime(),end=r.check_out?new Date(r.check_out).getTime():Date.now();return Number.isFinite(start)&&Number.isFinite(end)?Math.max(0,(end-start)/3600000):0;};
+  rs.sort((a,b)=>employeeName(a).localeCompare(employeeName(b),'ar')||new Date(a.check_in)-new Date(b.check_in));
+  reportRows=rs;
   const total=rs.reduce((sum,r)=>sum+hoursNow(r),0);
   $('grandHours').textContent=total.toFixed(2);$('recordCount').textContent=rs.length;$('avgHours').textContent=rs.length?(total/rs.length).toFixed(2):'0';
-  $('reportTable').innerHTML=rs.length?'<table><thead><tr><th>الموظف</th><th>الفرع</th><th>دخول</th><th>انصراف</th><th>الساعات</th><th>الحالة</th><th>إجراء</th></tr></thead><tbody>'+
-   rs.map(r=>'<tr><td><b>'+esc2(r.profiles?.full_name||dashboardEmployees.find(e=>e.id===r.employee_id)?.full_name||'')+'</b><br><small>'+esc2(r.profiles?.department||dashboardEmployees.find(e=>e.id===r.employee_id)?.department||'')+'</small></td><td>'+esc2(r.branch||r.profiles?.branch||dashboardEmployees.find(e=>e.id===r.employee_id)?.branch||'—')+'</td><td>'+esc2(fmtDate(r.check_in))+'</td><td>'+esc2(r.check_out?fmtDate(r.check_out):'—')+'</td><td>'+esc2(hoursNow(r).toFixed(2))+'</td><td>'+(r.check_out?'مغادر':'<span class="live-online">موجود • الساعات مستمرة</span>')+'</td><td><button class="danger" onclick="deleteAttendanceRecord(\''+esc2(r.id)+'\')">🗑️ حذف</button></td></tr>').join('')+
-   '</tbody></table>':'<div class="empty">لا توجد سجلات للفترة والاختيارات المحددة</div>';
+  if(!rs.length){$('reportTable').innerHTML='<div class="empty">لا توجد سجلات للفترة والاختيارات المحددة</div>';return;}
+  let html='<table><thead><tr><th>الموظف</th><th>الفرع</th><th>دخول</th><th>انصراف</th><th>الساعات</th><th>الحالة</th><th>إجراء</th></tr></thead><tbody>';
+  let lastId=null;
+  for(const r of rs){
+   if(r.employee_id!==lastId){
+    const group=rs.filter(x=>x.employee_id===r.employee_id);
+    const groupHours=group.reduce((s,x)=>s+hoursNow(x),0);
+    html+='<tr class="employee-group"><td colspan="7">👤 '+esc2(employeeName(r))+' — '+esc2(employeeBranch(r))+' / '+esc2(employeeDept(r))+' — '+group.length+' سجل — إجمالي '+groupHours.toFixed(2)+' ساعة</td></tr>';
+    lastId=r.employee_id;
+   }
+   html+='<tr><td><b>'+esc2(employeeName(r))+'</b><br><small>'+esc2(employeeDept(r))+'</small></td><td>'+esc2(employeeBranch(r))+'</td><td>'+esc2(fmtDate(r.check_in))+'</td><td>'+esc2(r.check_out?fmtDate(r.check_out):'—')+'</td><td>'+esc2(hoursNow(r).toFixed(2))+'</td><td>'+(r.check_out?'مغادر':'<span class="live-online">موجود • الساعات مستمرة</span>')+'</td><td><button class="danger" onclick="deleteAttendanceRecord(\''+esc2(r.id)+'\')">🗑️ حذف</button></td></tr>';
+  }
+  $('reportTable').innerHTML=html+'</tbody></table>';
  }catch(e){$('reportTable').innerHTML='<div class="empty">❌ '+esc2(e.message)+'</div>';}
 }
 function selectEmployeeDetail(id){$('detailEmployee').value=id;loadEmployeeDetails();scrollToSection('employeeDetailsPanel')}
@@ -602,19 +618,41 @@ function printCurrentReport(){
  const w=window.open('','_blank');if(!w){alert('اسمح بفتح النوافذ المنبثقة لتصدير التقرير PDF');return}
  const logo=document.querySelector('.logo')?.src||'';
  const from=$('from').value||cairoDate(),to=$('to').value||from;
- const branch=$('reportBranchFilter').value||'كل الفروع';
- const dept=$('reportDepartmentFilter').value||'كل الأقسام';
- const selectedEmployees=[...$('employeeFilter').selectedOptions].filter(o=>o.value);
- const employeeLabel=selectedEmployees.length?selectedEmployees.map(o=>o.textContent).join('، '):'كل الموظفين المطابقين للفلاتر';
+ const branch=$('reportBranchFilter').value||'كل الفروع',dept=$('reportDepartmentFilter').value||'كل الأقسام';
+ const selectedEmployees=staffFilteredEmployees('report');
+ const employeeLabel=selectedEmployees.length?selectedEmployees.map(e=>e.full_name).join('، '):'كل الموظفين المطابقين للفلاتر';
  const table=report.querySelector('table').cloneNode(true);
- table.querySelectorAll('tr').forEach(tr=>{if(tr.lastElementChild)tr.removeChild(tr.lastElementChild)});
+ table.querySelectorAll('tr').forEach(tr=>{if(tr.classList.contains('employee-group')){const cell=tr.firstElementChild;if(cell)cell.colSpan=6;}else if(tr.lastElementChild)tr.removeChild(tr.lastElementChild)});
  w.document.open();
  w.document.write('<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Energy Plus - Attendance Report</title><style>'+
- '@page{size:A4 landscape;margin:12mm}*{box-sizing:border-box;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}body{margin:0;background:#fff;color:#17263a;font-family:Arial,Tahoma,sans-serif;font-size:12px}.page{position:relative;min-height:180mm;overflow:hidden}.watermark{position:fixed;z-index:0;left:50%;top:48%;width:390px;height:390px;object-fit:contain;transform:translate(-50%,-50%);opacity:.075;pointer-events:none}.content{position:relative;z-index:1}.header{display:flex;align-items:center;gap:18px;padding:15px 20px;background:#07111f;color:#fff;border-bottom:5px solid #e7bd57;border-radius:10px 10px 0 0}.header img{width:76px;height:76px;object-fit:contain;background:#fff;border-radius:8px;padding:4px}.brand{flex:1}.brand h1{font-size:25px;letter-spacing:1px;margin:0 0 6px;color:#e7bd57}.brand h2{font-size:17px;margin:0 0 5px;color:#fff}.brand p{margin:0;color:#d1dae5;font-size:11px}.meta{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0}.meta div{border:1px solid #d8dee7;border-right:3px solid #e7bd57;border-radius:6px;padding:9px 11px;background:rgba(255,255,255,.94)}.meta strong{display:block;color:#6b7787;font-size:10px;margin-bottom:5px}.meta span{font-weight:700;color:#17263a;overflow-wrap:anywhere}table{width:100%;border-collapse:collapse;background:rgba(255,255,255,.96);font-size:10.5px}thead{display:table-header-group}tr{break-inside:avoid;page-break-inside:avoid}th{background:#10223a!important;color:#fff!important;padding:9px 7px;border:1px solid #263a53;text-align:right}td{padding:8px 7px;border:1px solid #d7dee8;text-align:right;color:#1b2c40}tbody tr:nth-child(even){background:#f1f5f9!important}.footer{margin-top:16px;padding:10px 4px;border-top:2px solid #e7bd57;display:flex;justify-content:space-between;gap:12px;color:#566579;font-size:10px}.credit{font-weight:700;color:#10223a;direction:ltr;text-align:left;white-space:nowrap}@media screen{body{background:#e8edf3;padding:20px}.page{max-width:1100px;margin:auto;background:#fff;padding:18px;box-shadow:0 4px 24px #14243b22}}'+
- '</style></head><body><div class="page">'+(logo?'<img class="watermark" src="'+logo+'" alt="">':'')+'<div class="content"><header class="header">'+(logo?'<img src="'+logo+'" alt="Energy Plus logo">':'')+'<div class="brand"><h1>ENERGY PLUS</h1><h2>تقرير الحضور والساعات</h2><p>Attendance and working-hours report</p></div></header><section class="meta"><div><strong>REPORT PERIOD / الفترة</strong><span>'+esc2(from)+' — '+esc2(to)+'</span></div><div><strong>BRANCH / الفرع</strong><span>'+esc2(branch)+'</span></div><div><strong>DEPARTMENT / القسم</strong><span>'+esc2(dept)+'</span></div><div style="grid-column:1/-1"><strong>EMPLOYEES INCLUDED / الموظفون</strong><span>'+esc2(employeeLabel)+'</span></div></section><h3 style="color:#10223a;margin:16px 0 8px">تفاصيل الحضور والانصراف</h3>'+table.outerHTML+'<footer class="footer"><span>Energy Plus • Management Report • Generated on '+esc2(cairoDate())+'</span><span class="credit">Developed by Captain Marwan</span></footer></div></div><script>window.addEventListener("load",()=>setTimeout(()=>window.print(),350));<\\/script></body></html>');
+ '@page{size:A4 landscape;margin:12mm}*{box-sizing:border-box;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}body{margin:0;background:#fff;color:#17263a;font-family:Arial,Tahoma,sans-serif;font-size:12px}.page{position:relative;min-height:180mm;overflow:hidden}.watermark{position:fixed;z-index:0;left:50%;top:48%;width:390px;height:390px;object-fit:contain;transform:translate(-50%,-50%);opacity:.075;pointer-events:none}.content{position:relative;z-index:1}.header{display:flex;align-items:center;gap:18px;padding:15px 20px;background:#07111f;color:#fff;border-bottom:5px solid #e7bd57;border-radius:10px 10px 0 0}.header img{width:76px;height:76px;object-fit:contain;background:#fff;border-radius:8px;padding:4px}.brand{flex:1}.brand h1{font-size:25px;letter-spacing:1px;margin:0 0 6px;color:#e7bd57}.brand h2{font-size:17px;margin:0 0 5px;color:#fff}.brand p{margin:0;color:#d1dae5;font-size:11px}.meta{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0}.meta div{border:1px solid #d8dee7;border-right:3px solid #e7bd57;border-radius:6px;padding:9px 11px;background:rgba(255,255,255,.94)}.meta strong{display:block;color:#6b7787;font-size:10px;margin-bottom:5px}.meta span{font-weight:700;color:#17263a;overflow-wrap:anywhere}table{width:100%;border-collapse:collapse;background:rgba(255,255,255,.96);font-size:10.5px}thead{display:table-header-group}tr{break-inside:avoid;page-break-inside:avoid}th{background:#10223a!important;color:#fff!important;padding:9px 7px;border:1px solid #263a53;text-align:right}td{padding:8px 7px;border:1px solid #d7dee8;text-align:right;color:#1b2c40}tbody tr:nth-child(even){background:#f1f5f9!important}.employee-group td{background:#e7bd57!important;color:#07111f!important;font-weight:700;padding:10px}.footer{margin-top:16px;padding:10px 4px;border-top:2px solid #e7bd57;display:flex;justify-content:space-between;gap:12px;color:#566579;font-size:10px}.credit{font-weight:700;color:#10223a;direction:ltr;text-align:left;white-space:nowrap}@media screen{body{background:#e8edf3;padding:20px}.page{max-width:1100px;margin:auto;background:#fff;padding:18px;box-shadow:0 4px 24px #14243b22}}'+
+ '</style></head><body><div class="page">'+(logo?'<img class="watermark" src="'+logo+'" alt="">':'')+'<div class="content"><header class="header">'+(logo?'<img src="'+logo+'" alt="Energy Plus logo">':'')+'<div class="brand"><h1>ENERGY PLUS</h1><h2>تقرير الحضور والساعات</h2><p>Attendance and working-hours report</p></div></header><section class="meta"><div><strong>REPORT PERIOD / الفترة</strong><span>'+esc2(from)+' — '+esc2(to)+'</span></div><div><strong>BRANCH / الفرع</strong><span>'+esc2(branch)+'</span></div><div><strong>DEPARTMENT / القسم</strong><span>'+esc2(dept)+'</span></div><div style="grid-column:1/-1"><strong>EMPLOYEES INCLUDED / الموظفون</strong><span>'+esc2(employeeLabel||'كل الموظفين')+'</span></div></section><h3 style="color:#10223a;margin:16px 0 8px">تفاصيل الحضور والانصراف — كل موظف وسجلاته مرتبة حسب اليوم</h3>'+table.outerHTML+'<footer class="footer"><span>Energy Plus • Management Report • Generated on '+esc2(cairoDate())+'</span><span class="credit">Developed by Captain Marwan</span></footer></div></div><script>window.addEventListener("load",()=>setTimeout(()=>window.print(),350));<\\/script></body></html>');
  w.document.close();w.focus();
 }
-function exportCurrentCSV(){if(!reportRows.length){alert('اعرض التقرير أولاً');return}const a=[['الاسم','الفرع','القسم','الحضور','الانصراف','الساعات'],...reportRows.map(r=>{const e=dashboardEmployees.find(x=>x.id===r.employee_id)||{};return [r.profiles?.full_name||e.full_name||'',r.branch||r.profiles?.branch||e.branch||'',r.profiles?.department||e.department||'',fmtDate(r.check_in),r.check_out?fmtDate(r.check_out):'',r.check_out?hours(r).toFixed(2):'']})];const b=new Blob(['\ufeff'+a.map(x=>x.map(v=>'"'+String(v).replaceAll('"','""')+'"').join(',')).join('\n')],{type:'text/csv;charset=utf-8'}),x=document.createElement('a');x.href=URL.createObjectURL(b);x.download='energy-plus-manager-report.csv';x.click();URL.revokeObjectURL(x.href);}
+function exportCurrentCSV(){
+ if(!reportRows.length){alert('اعرض التقرير أولاً');return}
+ const getEmp=r=>dashboardEmployees.find(e=>e.id===r.employee_id)||{};
+ const name=r=>r.profiles?.full_name||getEmp(r).full_name||'موظف بدون اسم';
+ const branch=r=>r.branch||r.profiles?.branch||getEmp(r).branch||'';
+ const dept=r=>r.profiles?.department||getEmp(r).department||'';
+ const calcHours=r=>r.check_out?hours(r):Math.max(0,(Date.now()-new Date(r.check_in).getTime())/3600000);
+ const sorted=[...reportRows].sort((a,b)=>name(a).localeCompare(name(b),'ar')||new Date(a.check_in)-new Date(b.check_in));
+ const out=[['تقرير حضور وانصراف Energy Plus'],['الفترة', $('from').value||cairoDate(), 'إلى', $('to').value||cairoDate()],['']];
+ let currentId=null,group=[];
+ const flush=()=>{
+  if(!group.length)return;
+  const first=group[0],total=group.reduce((s,r)=>s+calcHours(r),0);
+  out.push(['الموظف',name(first),'الفرع',branch(first),'القسم',dept(first),'عدد السجلات',group.length,'إجمالي الساعات',total.toFixed(2)]);
+  out.push(['التاريخ','وقت الحضور','وقت الانصراف','الساعات','الحالة']);
+  group.forEach(r=>out.push([r.check_in?new Date(r.check_in).toLocaleDateString('ar-EG',{timeZone:'Africa/Cairo'}):'',fmtDate(r.check_in),r.check_out?fmtDate(r.check_out):'لم يسجل الانصراف',calcHours(r).toFixed(2),r.check_out?'مغادر':'حضور مفتوح']));
+  out.push(['']);
+ };
+ sorted.forEach(r=>{if(currentId!==null&&r.employee_id!==currentId){flush();group=[];}currentId=r.employee_id;group.push(r);});
+ flush();
+ const blob=new Blob(['\ufeff'+out.map(row=>row.map(v=>'"'+String(v??'').replaceAll('"','""')+'"').join(',')).join('\r\n')],{type:'text/csv;charset=utf-8'});
+ const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='energy-plus-attendance-grouped-'+($('from').value||cairoDate())+'-to-'+($('to').value||cairoDate())+'.csv';document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
+}
+
 let notifState=JSON.parse(localStorage.getItem('energy_manager_notifications')||'[]'),notifSeen=JSON.parse(localStorage.getItem('energy_manager_seen')||'{}'),notifUnread=Number(localStorage.getItem('energy_manager_unread')||0);
 function saveNotifState(){localStorage.setItem('energy_manager_notifications',JSON.stringify(notifState.slice(0,50)));localStorage.setItem('energy_manager_seen',JSON.stringify(notifSeen));localStorage.setItem('energy_manager_unread',String(notifUnread));updateNotifUI();}
 function updateNotifUI(){const b=$('notifBadge'),r=$('requestRailBadge');if(b){b.textContent=Math.min(notifUnread,99);b.style.display=notifUnread?'flex':'none'}if(r){const n=(dashboardRequests||[]).filter(x=>x.status==='pending').length;r.textContent=n;r.style.display=n?'flex':'none'}renderNotifications();}
