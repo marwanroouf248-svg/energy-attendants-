@@ -464,8 +464,8 @@ function renderRequests(){
  const p=dashboardRequests.filter(x=>x.status==='pending');
  $('pendingRequests').innerHTML=p.length?p.map(r=>{
   const type=r.request_type==='check_in'?'🟢 طلب حضور':r.request_type==='check_out'?'🔴 طلب انصراف':r.request_type==='break_start'?'☕ طلب بدء بريك':r.request_type==='break_end'?'▶️ طلب إنهاء بريك':'📋 طلب حضور';
-  const approve=hasAccess('approve_requests')?'<button class="success" onclick="decideRequest(\\''+r.id+'\\',\\'approve\\')">✓ موافقة</button>':'';
-  const reject=hasAccess('reject_requests')?'<button class="danger" onclick="decideRequest(\\''+r.id+'\\',\\'reject\\')">✕ رفض</button>':'';
+  const approve=hasAccess('approve_requests')?'<button class="success" onclick="decideRequest(\''+r.id+'\',\'approve\')">✓ موافقة</button>':'';
+  const reject=hasAccess('reject_requests')?'<button class="danger" onclick="decideRequest(\''+r.id+'\',\'reject\')">✕ رفض</button>':'';
   return '<div class="request-card"><div class="request-top"><div><div class="request-name">'+esc2(r.profiles?.full_name||'موظف')+'</div><div class="request-meta">'+type+' · '+esc2(r.profiles?.branch||'—')+' · '+esc2(r.profiles?.department||'—')+'<br>🕐 '+esc2(fmtDate(r.requested_at))+' · ⏳ <b>بقاله '+esc2(requestAge(r.requested_at))+'</b> · 📍 '+esc2(r.location_distance??'—')+'m</div></div><span class="badge warning">معلق</span></div><div class="request-actions">'+approve+reject+'</div></div>';
  }).join(''):'<div class="empty">لا توجد طلبات معلقة 🎉</div>';
 }
