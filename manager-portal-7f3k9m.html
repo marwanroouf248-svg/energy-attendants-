@@ -21,6 +21,7 @@ button{border:0;border-radius:14px;padding:13px 17px;color:#fff;background:#172a
 .access-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .access-check{display:flex;align-items:center;gap:9px;background:#091728;border:1px solid #203850;border-radius:13px;padding:11px;color:#dfe8f2}
 .access-check input{width:18px;height:18px;margin:0;accent-color:var(--gold)}
+.permission-tree{display:grid;gap:10px}.permission-group{background:#071321;border:1px solid #203850;border-radius:14px;padding:10px}.permission-children{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin:9px 26px 0 0;padding-top:9px;border-top:1px solid #203850}.permission-children .access-check{font-size:12px;padding:8px;background:#0d1a2b}@media(max-width:650px){.permission-children{grid-template-columns:1fr}}
 .manager-list{display:grid;gap:10px;margin-top:14px}
 .permission-table{width:100%;border-collapse:collapse;min-width:900px}
 .permission-table th,.permission-table td{padding:12px;border-bottom:1px solid #1c3044;text-align:right;vertical-align:middle}
@@ -52,14 +53,35 @@ button{border:0;border-radius:14px;padding:13px 17px;color:#fff;background:#172a
 <input id="managerEditId" type="hidden">
 <div class="report-controls"><input id="managerName" placeholder="اسم المدير"><input id="managerEmail" type="email" placeholder="البريد الإلكتروني"><input id="managerPassword" type="password" placeholder="كلمة المرور — 8 أحرف على الأقل"></div>
 <div style="margin-top:12px"><b>الفروع المسموح له يشوفها</b><div id="managerBranchChecks" class="access-grid" style="margin-top:8px"><div class="empty">جاري تحميل الفروع...</div></div></div>
-<div style="margin-top:14px"><b>الصلاحيات</b><div id="managerPermissionChecks" class="access-grid" style="margin-top:8px">
-<label class="access-check"><input type="checkbox" data-permission="view_live"><span>👥 حالة الموظفين والحضور</span></label>
-<label class="access-check"><input type="checkbox" data-permission="view_reports"><span>📊 التقارير</span></label>
-<label class="access-check"><input type="checkbox" data-permission="view_employee_details"><span>🔎 ملف الموظف</span></label>
-<label class="access-check"><input type="checkbox" data-permission="view_requests"><span>⏳ الطلبات وسجل الطلبات</span></label>
-<label class="access-check"><input type="checkbox" data-permission="manage_attendance"><span>🎛️ التحكم في الحضور والبريك</span></label>
-<label class="access-check"><input type="checkbox" data-permission="delete_attendance"><span>🗑️ حذف سجل حضور</span></label>
-<label class="access-check"><input type="checkbox" data-permission="view_telegram"><span>📨 نشاط Telegram</span></label>
+<div style="margin-top:14px"><b>الصلاحيات التفصيلية</b><p class="muted" style="margin:5px 0 10px;font-size:12px">اختار كل جزء لوحده. الأقسام اللي جواها خيارات تقدر تحدد منها إيه يظهر للمدير، بما فيها التصدير والطباعة.</p>
+<div id="managerPermissionChecks" class="permission-tree">
+<div class="permission-group"><label class="access-check"><input type="checkbox" data-permission="view_live"><span>👥 حالة الموظفين والحضور</span></label></div>
+<div class="permission-group"><label class="access-check"><input type="checkbox" data-permission="view_reports"><span>📊 التقارير الرئيسية</span></label><div class="permission-children">
+<label class="access-check"><input type="checkbox" data-permission="report_filter_dates"><span>تحديد الفترة الزمنية</span></label>
+<label class="access-check"><input type="checkbox" data-permission="report_filter_branch"><span>فلتر الفرع</span></label>
+<label class="access-check"><input type="checkbox" data-permission="report_filter_department"><span>فلتر القسم</span></label>
+<label class="access-check"><input type="checkbox" data-permission="report_filter_employees"><span>اختيار موظف أو أكتر</span></label>
+<label class="access-check"><input type="checkbox" data-permission="report_export_csv"><span>تصدير التقرير CSV</span></label>
+<label class="access-check"><input type="checkbox" data-permission="report_export_pdf"><span>طباعة / تصدير PDF</span></label>
+<label class="access-check"><input type="checkbox" data-permission="delete_attendance"><span>حذف سجل حضور من التقرير</span></label>
+</div></div>
+<div class="permission-group"><label class="access-check"><input type="checkbox" data-permission="view_employee_details"><span>🔎 ملف الموظف وتفاصيله</span></label></div>
+<div class="permission-group"><label class="access-check"><input type="checkbox" data-permission="view_requests"><span>⏳ الطلبات وسجل الطلبات</span></label></div>
+<div class="permission-group"><label class="access-check"><input type="checkbox" data-permission="view_break_report"><span>☕ تقرير البريك</span></label></div>
+<div class="permission-group"><label class="access-check"><input type="checkbox" data-permission="view_attendance_rates"><span>📈 معدل التسجيل لكل موظف</span></label><div class="permission-children">
+<label class="access-check"><input type="checkbox" data-permission="rate_export_csv"><span>تصدير معدل التسجيل CSV</span></label>
+<label class="access-check"><input type="checkbox" data-permission="rate_export_pdf"><span>طباعة / تصدير معدل التسجيل PDF</span></label>
+</div></div>
+<div class="permission-group"><label class="access-check"><input type="checkbox" data-permission="manage_attendance"><span>🎛️ التحكم في الحضور والبريك</span></label><div class="permission-children">
+<label class="access-check"><input type="checkbox" data-permission="manual_check_in"><span>تسجيل حضور يدوي</span></label>
+<label class="access-check"><input type="checkbox" data-permission="manual_check_out"><span>تسجيل انصراف يدوي</span></label>
+<label class="access-check"><input type="checkbox" data-permission="manual_break_start"><span>بدء بريك يدوي</span></label>
+<label class="access-check"><input type="checkbox" data-permission="manual_break_end"><span>إنهاء بريك يدوي</span></label>
+<label class="access-check"><input type="checkbox" data-permission="manual_day_edit"><span>إضافة / تعديل يوم وساعات حضور</span></label>
+</div></div>
+<div class="permission-group"><label class="access-check"><input type="checkbox" data-permission="add_employee"><span>➕ إضافة موظف جديد</span></label></div>
+<div class="permission-group"><label class="access-check"><input type="checkbox" data-permission="manage_employee_permissions"><span>🔐 تعديل صلاحيات الموظفين وفروع الحضور</span></label></div>
+<div class="permission-group"><label class="access-check"><input type="checkbox" data-permission="view_telegram"><span>📨 نشاط Telegram</span></label></div>
 </div></div>
 <div class="request-actions"><button class="primary" onclick="saveManagerAccount()">💾 حفظ حساب المدير</button><button class="secondary" onclick="resetManagerAccountForm()">تفريغ النموذج</button></div>
 <div id="managerAccountMsg" class="empty"></div></div>
@@ -68,7 +90,7 @@ button{border:0;border-radius:14px;padding:13px 17px;color:#fff;background:#172a
 <section class="panel" id="reportsPanel"><div class="panel-head"><div><h2>📊 التقارير</h2><p>تقرير تفصيلي للحضور والساعات مع إمكانية التصدير والطباعة</p></div></div><div class="report-controls"><input id="from" type="date" aria-label="من تاريخ"><input id="to" type="date" aria-label="إلى تاريخ"><select id="reportBranchFilter" onchange="updateStaffFilters(\'report\')"><option value="">كل الفروع</option></select><select id="reportDepartmentFilter" onchange="updateStaffFilters(\'report\')"><option value="">كل الأقسام</option></select><select id="employeeFilter" multiple size="4" aria-label="اختيار موظف أو أكثر" title="يمكن اختيار أكثر من موظف باستخدام Ctrl أو Command" onchange="updateStaffFilters(\'report\')" style="min-width:190px;min-height:96px"><option disabled>اختار موظف أو أكثر — Ctrl للاختيار المتعدد</option></select><small class="report-employee-hint" style="align-self:center;max-width:190px">اختار موظف واحد أو أكتر. استخدم Ctrl في ويندوز (أو Command في ماك) لتحديد أكتر من موظف. اترك الاختيار فاضي لعرض كل الموظفين.</small><button class="primary" onclick="loadReport()">عرض التقرير</button></div><div class="report-kpis"><div><span>إجمالي الساعات</span><b id="grandHours">0</b></div><div><span>عدد السجلات</span><b id="recordCount">0</b></div><div><span>متوسط الساعات/سجل</span><b id="avgHours">0</b></div></div><div id="reportTable" class="report-table"></div><div class="actions"><button class="success" onclick="exportCurrentCSV()">⬇️ تصدير CSV</button><button class="secondary" onclick="printCurrentReport()">🖨️ طباعة / PDF</button></div></section>
 <section class="panel" id="employeeDetailsPanel"><div class="panel-head"><div><h2>🔎 ملف الموظف</h2><p>تفاصيل الحضور والبريك والساعات للموظف المختار</p></div><button class="secondary" style="width:auto" onclick="clearEmployeeDetails()">مسح</button></div><div class="report-controls"><select id="detailEmployee"><option value="">اختر موظفًا</option></select><input id="detailFrom" type="date"><input id="detailTo" type="date"><button class="primary" onclick="loadEmployeeDetails()">عرض الملف</button></div><div id="employeeDetails" class="empty">اختر موظفًا لعرض التفاصيل.</div></section>
 <section class="panel" id="requestsHistoryPanel"><div class="panel-head"><div><h2>🗂️ سجل الطلبات</h2><p>كل طلبات الحضور والانصراف وحالتها وسبب الرفض</p></div></div><div class="report-controls"><input id="reqFrom" type="date"><input id="reqTo" type="date"><select id="reqEmployee"><option value="">كل الموظفين</option></select><select id="reqStatus"><option value="">كل الحالات</option><option value="pending">معلق</option><option value="approved">مقبول</option><option value="rejected">مرفوض</option></select><button class="primary" onclick="loadRequestHistory()">عرض</button></div><div id="requestHistory" class="report-table"></div></section>
-<section class="panel"><div class="panel-head"><div><h2>☕ تقرير البريك</h2><p>بداية ونهاية البريك والمدة المسموحة والتأخير</p></div></div><div class="report-controls"><input id="breakFrom" type="date"><input id="breakTo" type="date"><select id="breakEmployee"><option value="">كل الموظفين</option></select><button class="primary" onclick="loadBreakReport()">عرض</button></div><div id="breakReport" class="report-table"></div></section>
+<section class="panel" id="breakReportPanel"><div class="panel-head"><div><h2>☕ تقرير البريك</h2><p>بداية ونهاية البريك والمدة المسموحة والتأخير</p></div></div><div class="report-controls"><input id="breakFrom" type="date"><input id="breakTo" type="date"><select id="breakEmployee"><option value="">كل الموظفين</option></select><button class="primary" onclick="loadBreakReport()">عرض</button></div><div id="breakReport" class="report-table"></div></section>
 <section class="panel" id="ratesPanel"><div class="panel-head"><div><h2>📈 معدل التسجيل لكل موظف</h2><p>نسبة الأيام التي ظهر فيها تسجيل حضور داخل الفترة المحددة.</p></div></div><div class="report-controls"><input id="rateFrom" type="date" aria-label="من تاريخ"><input id="rateTo" type="date" aria-label="إلى تاريخ"><select id="rateBranchFilter" onchange="updateStaffFilters(\'rate\')"><option value="">كل الفروع</option></select><select id="rateDepartmentFilter" onchange="updateStaffFilters(\'rate\')"><option value="">كل الأقسام</option></select><select id="rateEmployeeFilter" multiple size="4" aria-label="اختيار موظف أو أكثر" title="اختار موظف أو أكثر؛ سيب الاختيار فاضي لعرض الكل" onchange="renderAttendanceRates()" style="min-width:190px;min-height:88px"><option value="">كل الموظفين</option></select><small style="align-self:center;color:var(--muted,#777)">اختار موظف أو أكتر (Ctrl للاختيار المتعدد)، وسيبها فاضية لعرض الكل</small><button class="primary" onclick="renderAttendanceRates()">حساب المعدل</button><button class="success" onclick="exportAttendanceRatesCSV()">⬇️ تصدير المعدل CSV</button><button class="secondary" onclick="printAttendanceRates()">🖨️ طباعة / PDF</button></div><div id="attendanceRates" class="report-table"></div></section><section class="panel" id="addEmployeePanel"><div class="panel-head"><div><h2>➕ إضافة موظف جديد</h2><p>اكتب اسم الموظف واختار الفرع والقسم فقط</p></div></div><div class="report-controls"><input id="newEmployeeName" type="text" placeholder="اسم الموظف"><select id="newEmployeeBranch"><option value="">اختار الفرع</option><option value="فرع الرخاوي">فرع الرخاوي</option><option value="فرع فودافون">فرع فودافون</option></select><select id="newEmployeeDepartment"><option value="">اختار القسم</option><option value="Assessment">Assessment</option><option value="Coach">Coach</option><option value="House keeping">House keeping</option><option value="HR">HR</option><option value="Move">Move</option><option value="Outdoor">Outdoor</option><option value="Quality">Quality</option><option value="Sales">Sales</option></select><button class="primary" onclick="createNewEmployee()">إضافة الموظف</button></div><div id="newEmployeeMsg" class="muted" style="margin-top:10px"></div></section><section class="panel"><div class="panel-head"><div><h2>👥 دليل الموظفين</h2><p>الفرع والقسم والحالة الحالية</p></div></div><div id="employees" class="employee-directory"></div></section></div></section><section class="panel" id="employeePermissionsPanel">
  <div class="panel-head"><div><h2>🔐 صلاحيات حضور وانصراف الموظفين</h2><p>حدد لكل موظف إمكانية تسجيل الحضور والانصراف والفروع المسموح له التسجيل منها. فرع الموظف الأساسي يظل محددًا دائمًا.</p></div><button class="secondary" onclick="loadEmployeePermissionTable()">↻ تحديث الجدول</button></div>
  <div id="employeePermissionsMsg" class="muted" style="margin-bottom:10px"></div>
@@ -83,7 +105,21 @@ async function managerAccessApi(action,body={},retry=true){
   try{return await fetchJson(MANAGER_ACCESS_API,{method:'POST',headers:{'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},body:JSON.stringify({action,...body})});}
   catch(e){if(retry&&token&&String(e.message).includes('غير مصرح')){if(await refreshManagerSession())return managerAccessApi(action,body,false)}throw e}
 }
-function hasAccess(k){return managerAccess?.permissions?.[k]===true}
+function hasAccess(k){
+ const p=managerAccess?.permissions||{};
+ if(p[k]!==undefined)return p[k]===true;
+ const legacyParent={report_filter_dates:'view_reports',report_filter_branch:'view_reports',report_filter_department:'view_reports',report_filter_employees:'view_reports',report_export_csv:'view_reports',report_export_pdf:'view_reports',view_break_report:'view_reports',view_attendance_rates:'view_reports',rate_export_csv:'view_reports',rate_export_pdf:'view_reports',manual_check_in:'manage_attendance',manual_check_out:'manage_attendance',manual_break_start:'manage_attendance',manual_break_end:'manage_attendance',manual_day_edit:'manage_attendance'};
+ return legacyParent[k]?p[legacyParent[k]]===true:false;
+}
+function setPermissionControl(selector,key){document.querySelectorAll(selector).forEach(el=>el.classList.toggle('hidden',!hasAccess(key)))}
+function applyPermissionTreeDefaults(){
+ const p=managerAccess?.permissions||{};
+ document.querySelectorAll('#managerPermissionChecks input[data-permission]').forEach(x=>{
+   const k=x.dataset.permission;
+   if(p[k]!==undefined)x.checked=p[k]===true;
+   else x.checked=hasAccess(k);
+ });
+}
 async function loadEmployeePermissionTable(){
  const host=$('employeePermissionsTable'),msg=$('employeePermissionsMsg');if(!host)return;
  host.innerHTML='<div class="empty">جاري تحميل الصلاحيات...</div>';msg.textContent='';
@@ -122,14 +158,29 @@ async function deleteEmployee(id,name){
 
 function applyManagerAccess(){
   const hide=(id,show)=>{const el=$(id);if(el)el.classList.toggle('hidden',!show)};
+  const admin=String(managerAccess?.role||'')==='admin';
   hide('liveBoard',hasAccess('view_live'));hide('managerControlPanel',hasAccess('manage_attendance'));hide('reportsPanel',hasAccess('view_reports'));hide('employeeDetailsPanel',hasAccess('view_employee_details'));hide('requestsHistoryPanel',hasAccess('view_requests'));
+  hide('breakReportPanel',hasAccess('view_break_report'));hide('ratesPanel',hasAccess('view_attendance_rates'));hide('addEmployeePanel',hasAccess('add_employee'));
+  hide('managerAccountsPanel',admin);hide('employeePermissionsPanel',admin||hasAccess('manage_employee_permissions'));
   document.querySelectorAll('.requests-panel').forEach(el=>el.classList.toggle('hidden',!hasAccess('view_requests')));
   const rr=$('reportsRail');if(rr)rr.classList.toggle('hidden',!hasAccess('view_reports'));
   const rb=$('requestRailBadge')?.parentElement;if(rb)rb.classList.toggle('hidden',!hasAccess('view_requests'));
-  const ar=$('managerAccountsRail');if(ar)ar.classList.toggle('hidden',String(managerAccess?.role||'')!=='admin');
-  hide('managerAccountsPanel',String(managerAccess?.role||'')==='admin');
-  hide('employeePermissionsPanel',String(managerAccess?.role||'')==='admin');
-  const manualBtns=document.querySelectorAll('#managerControlPanel button');manualBtns.forEach(b=>b.disabled=!hasAccess('manage_attendance'));
+  const ar=$('managerAccountsRail');if(ar)ar.classList.toggle('hidden',!admin);
+  setPermissionControl('#reportsPanel .report-controls input#from, #reportsPanel .report-controls input#to','report_filter_dates');
+  setPermissionControl('#reportsPanel #reportBranchFilter','report_filter_branch');
+  setPermissionControl('#reportsPanel #reportDepartmentFilter','report_filter_department');
+  setPermissionControl('#reportsPanel #employeeFilter, #reportsPanel .report-employee-hint','report_filter_employees');
+  setPermissionControl('#reportsPanel button[onclick="exportCurrentCSV()"]','report_export_csv');
+  setPermissionControl('#reportsPanel button[onclick="printCurrentReport()"]','report_export_pdf');
+  setPermissionControl('#ratesPanel button[onclick="exportAttendanceRatesCSV()"]','rate_export_csv');
+  setPermissionControl('#ratesPanel button[onclick="printAttendanceRates()"]','rate_export_pdf');
+  setPermissionControl('#managerControlPanel button[onclick="manualAction(\'check_in\')"]','manual_check_in');
+  setPermissionControl('#managerControlPanel button[onclick="manualAction(\'check_out\')"]','manual_check_out');
+  setPermissionControl('#managerControlPanel button[onclick="manualAction(\'break_start\')"]','manual_break_start');
+  setPermissionControl('#managerControlPanel button[onclick="manualAction(\'break_end\')"]','manual_break_end');
+  setPermissionControl('#managerControlPanel .card .report-controls','manual_day_edit');
+  setPermissionControl('#reportTable button.danger','delete_attendance');
+  document.querySelectorAll('#managerControlPanel button').forEach(b=>{if(!b.classList.contains('hidden'))b.disabled=false;});
 }
 async function loadManagerAdminPanel(){
   if(managerAccess.role!=='admin')return;
@@ -146,8 +197,8 @@ function renderManagerBranches(names,selected){
 }
 function selectedManagerBranches(){return Array.from(document.querySelectorAll('#managerBranchChecks input[data-branch]:checked')).map(x=>x.getAttribute('data-branch')).filter(Boolean)}
 function selectedManagerPermissions(){const p={};document.querySelectorAll('#managerPermissionChecks input[data-permission]').forEach(x=>p[x.getAttribute('data-permission')]=x.checked);return p}
-function fillManagerPermissions(p){document.querySelectorAll('#managerPermissionChecks input[data-permission]').forEach(x=>x.checked=p?.[x.getAttribute('data-permission')]===true)}
-function resetManagerAccountForm(){ $('managerEditId').value='';$('managerName').value='';$('managerEmail').value='';$('managerPassword').value='';fillManagerPermissions({view_live:true,view_reports:true,view_employee_details:true,view_requests:true,manage_attendance:true});document.querySelectorAll('#managerBranchChecks input').forEach(x=>x.checked=false);$('managerAccountMsg').textContent='نموذج إنشاء مدير جديد.'}
+function fillManagerPermissions(p){document.querySelectorAll('#managerPermissionChecks input[data-permission]').forEach(x=>{const k=x.getAttribute('data-permission');x.checked=p?.[k]!==undefined?p[k]===true:hasAccess(k)})}
+function resetManagerAccountForm(){ $('managerEditId').value='';$('managerName').value='';$('managerEmail').value='';$('managerPassword').value='';fillManagerPermissions({view_live:true,view_reports:true,report_filter_dates:true,report_filter_branch:true,report_filter_department:true,report_filter_employees:true,report_export_csv:true,report_export_pdf:true,delete_attendance:true,view_employee_details:true,view_requests:true,view_break_report:true,view_attendance_rates:true,rate_export_csv:true,rate_export_pdf:true,manage_attendance:true,manual_check_in:true,manual_check_out:true,manual_break_start:true,manual_break_end:true,manual_day_edit:true,add_employee:false,manage_employee_permissions:false,view_telegram:true});document.querySelectorAll('#managerBranchChecks input').forEach(x=>x.checked=false);$('managerAccountMsg').textContent='نموذج إنشاء مدير جديد.'}
 function editManagerAccount(id){
   const m=managerAccountsCache.find(x=>x.id===id);if(!m)return;
   $('managerEditId').value=m.id;$('managerName').value=m.full_name||'';$('managerEmail').value=m.email||'';$('managerPassword').value='';fillManagerPermissions(m.access?.permissions||{});document.querySelectorAll('#managerBranchChecks input').forEach(x=>x.checked=(m.access?.branches||[]).includes(x.getAttribute('data-branch')));$('managerAccountMsg').textContent='تعديل صلاحيات: '+(m.full_name||'مدير');
