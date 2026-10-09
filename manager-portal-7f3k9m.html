@@ -128,6 +128,7 @@ function applyManagerAccess(){
   const rb=$('requestRailBadge')?.parentElement;if(rb)rb.classList.toggle('hidden',!hasAccess('view_requests'));
   const ar=$('managerAccountsRail');if(ar)ar.classList.toggle('hidden',String(managerAccess?.role||'')!=='admin');
   hide('managerAccountsPanel',String(managerAccess?.role||'')==='admin');
+  hide('employeePermissionsPanel',String(managerAccess?.role||'')==='admin');
   const manualBtns=document.querySelectorAll('#managerControlPanel button');manualBtns.forEach(b=>b.disabled=!hasAccess('manage_attendance'));
 }
 async function loadManagerAdminPanel(){
