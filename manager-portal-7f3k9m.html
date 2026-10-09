@@ -290,10 +290,7 @@ let liveTimer=null;let liveRefreshing=false;function startLiveDashboard(){if(liv
   if($('absentToday'))$('absentToday').textContent=absentCount;
   updateStaffFilters('report');updateStaffFilters('rate');
   renderRequests();renderLiveBoard();renderDirectory();loadDateDefaults();
-  // Restore the user's selected report date range and employee after refresh.
-  if($('from'))$('from').value=reportFilterState.from||$('from').value||cairoDate();
-  if($('to'))$('to').value=reportFilterState.to||$('to').value||cairoDate();
-  if(hasAccess('view_reports')){}
+  // Report data is loaded only when the user requests it, avoiding live-refresh flicker.
   $('liveStatus').textContent='● LIVE • آخر تحديث '+cairoTime();
  }catch(e){
   console.error('MANAGER_DATA_LOAD_ERROR',e);
