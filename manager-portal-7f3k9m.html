@@ -22,6 +22,16 @@ button{border:0;border-radius:14px;padding:13px 17px;color:#fff;background:#172a
 .access-check{display:flex;align-items:center;gap:9px;background:#091728;border:1px solid #203850;border-radius:13px;padding:11px;color:#dfe8f2}
 .access-check input{width:18px;height:18px;margin:0;accent-color:var(--gold)}
 .manager-list{display:grid;gap:10px;margin-top:14px}
+.permission-table{width:100%;border-collapse:collapse;min-width:900px}
+.permission-table th,.permission-table td{padding:12px;border-bottom:1px solid #1c3044;text-align:right;vertical-align:middle}
+.permission-table th{color:var(--gold);font-size:12px}
+.permission-table .permission-toggle{display:inline-flex;align-items:center;gap:6px;margin:4px 8px 4px 0;white-space:nowrap}
+.permission-table .permission-toggle input{width:17px;height:17px;margin:0;accent-color:var(--gold)}
+.permission-table .branch-toggle{display:inline-flex;align-items:center;gap:6px;margin:4px 10px 4px 0;white-space:nowrap;font-size:12px}
+.permission-table .branch-toggle input{width:16px;height:16px;margin:0;accent-color:var(--gold)}
+.permission-actions{display:flex;gap:6px;flex-wrap:wrap}
+.permission-actions button{padding:8px 10px;border-radius:10px;font-size:12px}
+
 .manager-item{background:#091728;border:1px solid #203850;border-radius:16px;padding:13px}
 .manager-item .row{display:flex;justify-content:space-between;gap:10px;align-items:center}
 .manager-item small{color:var(--muted);display:block;margin-top:4px}
@@ -59,17 +69,57 @@ button{border:0;border-radius:14px;padding:13px 17px;color:#fff;background:#172a
 <section class="panel" id="employeeDetailsPanel"><div class="panel-head"><div><h2>🔎 ملف الموظف</h2><p>تفاصيل الحضور والبريك والساعات للموظف المختار</p></div><button class="secondary" style="width:auto" onclick="clearEmployeeDetails()">مسح</button></div><div class="report-controls"><select id="detailEmployee"><option value="">اختر موظفًا</option></select><input id="detailFrom" type="date"><input id="detailTo" type="date"><button class="primary" onclick="loadEmployeeDetails()">عرض الملف</button></div><div id="employeeDetails" class="empty">اختر موظفًا لعرض التفاصيل.</div></section>
 <section class="panel" id="requestsHistoryPanel"><div class="panel-head"><div><h2>🗂️ سجل الطلبات</h2><p>كل طلبات الحضور والانصراف وحالتها وسبب الرفض</p></div></div><div class="report-controls"><input id="reqFrom" type="date"><input id="reqTo" type="date"><select id="reqEmployee"><option value="">كل الموظفين</option></select><select id="reqStatus"><option value="">كل الحالات</option><option value="pending">معلق</option><option value="approved">مقبول</option><option value="rejected">مرفوض</option></select><button class="primary" onclick="loadRequestHistory()">عرض</button></div><div id="requestHistory" class="report-table"></div></section>
 <section class="panel"><div class="panel-head"><div><h2>☕ تقرير البريك</h2><p>بداية ونهاية البريك والمدة المسموحة والتأخير</p></div></div><div class="report-controls"><input id="breakFrom" type="date"><input id="breakTo" type="date"><select id="breakEmployee"><option value="">كل الموظفين</option></select><button class="primary" onclick="loadBreakReport()">عرض</button></div><div id="breakReport" class="report-table"></div></section>
-<section class="panel" id="ratesPanel"><div class="panel-head"><div><h2>📈 معدل التسجيل لكل موظف</h2><p>نسبة الأيام التي ظهر فيها تسجيل حضور داخل الفترة المحددة.</p></div></div><div class="report-controls"><input id="rateFrom" type="date" aria-label="من تاريخ"><input id="rateTo" type="date" aria-label="إلى تاريخ"><select id="rateBranchFilter" onchange="updateStaffFilters(\'rate\')"><option value="">كل الفروع</option></select><select id="rateDepartmentFilter" onchange="updateStaffFilters(\'rate\')"><option value="">كل الأقسام</option></select><select id="rateEmployeeFilter" multiple size="4" aria-label="اختيار موظف أو أكثر" title="اختار موظف أو أكثر؛ سيب الاختيار فاضي لعرض الكل" onchange="renderAttendanceRates()" style="min-width:190px;min-height:88px"><option value="">كل الموظفين</option></select><small style="align-self:center;color:var(--muted,#777)">اختار موظف أو أكتر (Ctrl للاختيار المتعدد)، وسيبها فاضية لعرض الكل</small><button class="primary" onclick="renderAttendanceRates()">حساب المعدل</button><button class="success" onclick="exportAttendanceRatesCSV()">⬇️ تصدير المعدل CSV</button><button class="secondary" onclick="printAttendanceRates()">🖨️ طباعة / PDF</button></div><div id="attendanceRates" class="report-table"></div></section><section class="panel" id="addEmployeePanel"><div class="panel-head"><div><h2>➕ إضافة موظف جديد</h2><p>اكتب اسم الموظف واختار الفرع والقسم فقط</p></div></div><div class="report-controls"><input id="newEmployeeName" type="text" placeholder="اسم الموظف"><select id="newEmployeeBranch"><option value="">اختار الفرع</option><option value="فرع الرخاوي">فرع الرخاوي</option><option value="فرع فودافون">فرع فودافون</option></select><select id="newEmployeeDepartment"><option value="">اختار القسم</option><option value="Assessment">Assessment</option><option value="Coach">Coach</option><option value="House keeping">House keeping</option><option value="HR">HR</option><option value="Move">Move</option><option value="Outdoor">Outdoor</option><option value="Quality">Quality</option><option value="Sales">Sales</option></select><button class="primary" onclick="createNewEmployee()">إضافة الموظف</button></div><div id="newEmployeeMsg" class="muted" style="margin-top:10px"></div></section><section class="panel"><div class="panel-head"><div><h2>👥 دليل الموظفين</h2><p>الفرع والقسم والحالة الحالية</p></div></div><div id="employees" class="employee-directory"></div></section></div></section></main><script>const SUPABASE_URL='https://kfrshaagrcggcjalsjdu.supabase.co';
+<section class="panel" id="ratesPanel"><div class="panel-head"><div><h2>📈 معدل التسجيل لكل موظف</h2><p>نسبة الأيام التي ظهر فيها تسجيل حضور داخل الفترة المحددة.</p></div></div><div class="report-controls"><input id="rateFrom" type="date" aria-label="من تاريخ"><input id="rateTo" type="date" aria-label="إلى تاريخ"><select id="rateBranchFilter" onchange="updateStaffFilters(\'rate\')"><option value="">كل الفروع</option></select><select id="rateDepartmentFilter" onchange="updateStaffFilters(\'rate\')"><option value="">كل الأقسام</option></select><select id="rateEmployeeFilter" multiple size="4" aria-label="اختيار موظف أو أكثر" title="اختار موظف أو أكثر؛ سيب الاختيار فاضي لعرض الكل" onchange="renderAttendanceRates()" style="min-width:190px;min-height:88px"><option value="">كل الموظفين</option></select><small style="align-self:center;color:var(--muted,#777)">اختار موظف أو أكتر (Ctrl للاختيار المتعدد)، وسيبها فاضية لعرض الكل</small><button class="primary" onclick="renderAttendanceRates()">حساب المعدل</button><button class="success" onclick="exportAttendanceRatesCSV()">⬇️ تصدير المعدل CSV</button><button class="secondary" onclick="printAttendanceRates()">🖨️ طباعة / PDF</button></div><div id="attendanceRates" class="report-table"></div></section><section class="panel" id="addEmployeePanel"><div class="panel-head"><div><h2>➕ إضافة موظف جديد</h2><p>اكتب اسم الموظف واختار الفرع والقسم فقط</p></div></div><div class="report-controls"><input id="newEmployeeName" type="text" placeholder="اسم الموظف"><select id="newEmployeeBranch"><option value="">اختار الفرع</option><option value="فرع الرخاوي">فرع الرخاوي</option><option value="فرع فودافون">فرع فودافون</option></select><select id="newEmployeeDepartment"><option value="">اختار القسم</option><option value="Assessment">Assessment</option><option value="Coach">Coach</option><option value="House keeping">House keeping</option><option value="HR">HR</option><option value="Move">Move</option><option value="Outdoor">Outdoor</option><option value="Quality">Quality</option><option value="Sales">Sales</option></select><button class="primary" onclick="createNewEmployee()">إضافة الموظف</button></div><div id="newEmployeeMsg" class="muted" style="margin-top:10px"></div></section><section class="panel"><div class="panel-head"><div><h2>👥 دليل الموظفين</h2><p>الفرع والقسم والحالة الحالية</p></div></div><div id="employees" class="employee-directory"></div></section></div></section><section class="panel" id="employeePermissionsPanel">
+ <div class="panel-head"><div><h2>🔐 صلاحيات حضور وانصراف الموظفين</h2><p>حدد لكل موظف إمكانية تسجيل الحضور والانصراف والفروع المسموح له التسجيل منها. فرع الموظف الأساسي يظل محددًا دائمًا.</p></div><button class="secondary" onclick="loadEmployeePermissionTable()">↻ تحديث الجدول</button></div>
+ <div id="employeePermissionsMsg" class="muted" style="margin-bottom:10px"></div>
+ <div id="employeePermissionsTable" class="report-table"><div class="empty">جاري تحميل صلاحيات الموظفين...</div></div>
+</section></main><script>const SUPABASE_URL='https://kfrshaagrcggcjalsjdu.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY='sb_publishable_mKftrB-itebmeA-bdtt6dw_Q3QnxH0_';
 const F=SUPABASE_URL+'/functions/v1/employee-kiosk';
 const MANAGER_API=SUPABASE_URL+'/functions/v1/manager-dashboard-api';
 const MANAGER_ACCESS_API=SUPABASE_URL+'/functions/v1/manager-access-api';
-let managerAccess={permissions:{},branches:[]},managerAccountsCache=[];
+let managerAccess={permissions:{},branches:[]},managerAccountsCache=[];let employeePermissionsLoaded=false,employeePermissionBranches=[];
 async function managerAccessApi(action,body={},retry=true){
   try{return await fetchJson(MANAGER_ACCESS_API,{method:'POST',headers:{'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},body:JSON.stringify({action,...body})});}
   catch(e){if(retry&&token&&String(e.message).includes('غير مصرح')){if(await refreshManagerSession())return managerAccessApi(action,body,false)}throw e}
 }
 function hasAccess(k){return managerAccess?.permissions?.[k]===true}
+async function loadEmployeePermissionTable(){
+ const host=$('employeePermissionsTable'),msg=$('employeePermissionsMsg');if(!host)return;
+ host.innerHTML='<div class="empty">جاري تحميل الصلاحيات...</div>';msg.textContent='';
+ try{
+  const j=await api('manager_employee_permissions');employeePermissionBranches=j.branches||[];
+  const employees=(j.employees||[]).filter(e=>e.active);
+  host.innerHTML=employees.length?'<table class="permission-table"><thead><tr><th>الموظف</th><th>فرع الموظف الأساسي</th><th>صلاحيات الحضور</th><th>الفروع المسموح بها</th><th>إجراء</th></tr></thead><tbody>'+
+   employees.map(e=>{
+    const p=e.attendance_permissions||{},home=String(e.branch||''),allowed=p.allowed_branches||[];
+    const branchChecks=employeePermissionBranches.map(b=>{
+      const checked=allowed.includes(b)||b===home,disabled=b===home;
+      return '<label class="branch-toggle"><input type="checkbox" data-emp-branch="'+esc2(e.id)+'" value="'+esc2(b)+'" '+(checked?'checked':'')+(disabled?' disabled':'')+'><span>'+esc2(b)+(disabled?' (أساسي)':'')+'</span></label>';
+    }).join('');
+    return '<tr data-permission-row="'+esc2(e.id)+'"><td><b>'+esc2(e.full_name)+'</b><br><small>'+esc2(e.department||'—')+(e.employee_code?' · '+esc2(e.employee_code):'')+'</small></td>'+
+    '<td>'+esc2(home||'غير محدد')+'</td><td>'+
+    '<label class="permission-toggle"><input type="checkbox" data-emp-perm-in="'+esc2(e.id)+'" '+(p.can_check_in!==false?'checked':'')+'> <span>تسجيل حضور</span></label><br>'+
+    '<label class="permission-toggle"><input type="checkbox" data-emp-perm-out="'+esc2(e.id)+'" '+(p.can_check_out!==false?'checked':'')+'> <span>تسجيل انصراف</span></label></td>'+
+    '<td>'+branchChecks+'</td><td><div class="permission-actions"><button class="primary" onclick="saveEmployeePermissionRow(\''+esc2(e.id)+'\')">💾 حفظ</button><button class="danger" onclick="deleteEmployee(\''+esc2(e.id)+'\',\''+esc2(e.full_name)+'\')">🗑️ حذف الموظف</button></div></td></tr>';
+   }).join('')+'</tbody></table>':'<div class="empty">لا يوجد موظفون نشطون.</div>';
+  employeePermissionsLoaded=true;
+ }catch(e){msg.textContent='❌ '+esc2(e.message);host.innerHTML='<div class="empty">تعذر تحميل جدول الصلاحيات.</div>';}
+}
+async function saveEmployeePermissionRow(id){
+ const row=document.querySelector('[data-permission-row="'+id+'"]');if(!row)return;
+ const can_check_in=!!row.querySelector('[data-emp-perm-in]').checked;
+ const can_check_out=!!row.querySelector('[data-emp-perm-out]').checked;
+ const allowed_branches=Array.from(row.querySelectorAll('input[data-emp-branch]:checked')).map(x=>x.value);
+ try{$('employeePermissionsMsg').textContent='جاري حفظ صلاحيات الموظف...';await api('manager_save_employee_permissions',{employee_id:id,can_check_in,can_check_out,allowed_branches});$('employeePermissionsMsg').textContent='✅ تم حفظ الصلاحيات بنجاح.';}
+ catch(e){$('employeePermissionsMsg').textContent='❌ '+esc2(e.message);}
+}
+async function deleteEmployee(id,name){
+ if(!confirm('تأكيد إيقاف/حذف الموظف "'+name+'"؟\nسيتم منعه من الدخول والحضور، مع الاحتفاظ بسجلات الحضور والمرتبات السابقة.'))return;
+ try{$('employeePermissionsMsg').textContent='جاري حذف الموظف...';const j=await api('manager_delete_employee',{employee_id:id});$('employeePermissionsMsg').textContent='✅ '+(j.message||'تم حذف الموظف من قائمة النشطين.');employeePermissionsLoaded=false;await refreshDashboard();await loadEmployeePermissionTable();}
+ catch(e){$('employeePermissionsMsg').textContent='❌ '+esc2(e.message);}
+}
+
 function applyManagerAccess(){
   const hide=(id,show)=>{const el=$(id);if(el)el.classList.toggle('hidden',!show)};
   hide('liveBoard',hasAccess('view_live'));hide('managerControlPanel',hasAccess('manage_attendance'));hide('reportsPanel',hasAccess('view_reports'));hide('employeeDetailsPanel',hasAccess('view_employee_details'));hide('requestsHistoryPanel',hasAccess('view_requests'));
@@ -135,7 +185,7 @@ async function fetchJson(url,options={},timeoutMs=12000){
   }finally{clearTimeout(timer);}
 }
 async function api(action,body={},retry=true){
-  const managerActions=new Set(['manager_summary','manager_report','manager_telegram_logs','manager_telegram_status','manager_create_employee']);
+  const managerActions=new Set(['manager_summary','manager_report','manager_telegram_logs','manager_telegram_status','manager_create_employee','manager_employee_permissions','manager_save_employee_permissions','manager_delete_employee']);
   const endpoint=managerActions.has(action)?MANAGER_API:F;
   try{
     return await fetchJson(endpoint,{method:'POST',headers:{'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},body:JSON.stringify({action,...body})});
@@ -271,7 +321,7 @@ let liveTimer=null;let liveRefreshing=false;function startLiveDashboard(){if(liv
   managerAccess.role=managerAccess.role||((managerAccess.branches||[]).includes('*')?'admin':'manager');
   dashboardEmployees=sj.employees||[];
   applyManagerAccess();
-  if(managerAccess.role==='admin')loadManagerAdminPanel();
+  if(managerAccess.role==='admin'){loadManagerAdminPanel();if(!employeePermissionsLoaded)loadEmployeePermissionTable();}
   dashboardRequests=sj.requests||[];
   dashboardBreaks=sj.breaks||[];
   dashboardBreakIds=new Set(dashboardBreaks.filter(x=>!x.ended_at).map(x=>x.employee_id));
@@ -402,6 +452,7 @@ async function createNewEmployee(){
   $('newEmployeeMsg').innerHTML='✅ تم إضافة '+esc2(j.employee?.full_name||name)+' — '+esc2(branch)+' — '+esc2(department);
   $('newEmployeeName').value='';$('newEmployeeBranch').value='';$('newEmployeeDepartment').value='';
   await refreshDashboard();
+  employeePermissionsLoaded=false;await loadEmployeePermissionTable();
  }catch(e){$('newEmployeeMsg').innerHTML='❌ '+esc2(e.message)}
 }
 async function manualAction(action){const id=$('manualEmployee').value;if(!id){alert('اختر الموظف أولاً');return}const emp=dashboardEmployees.find(x=>x.id===id);const labels={check_in:'تسجيل حضور',check_out:'تسجيل انصراف',break_start:'بدء بريك',break_end:'إنهاء بريك'};if(!confirm('تأكيد '+labels[action]+' للموظف: '+(emp?.full_name||'')+'؟'))return;try{$('manualActionMsg').textContent='جاري التنفيذ...';if(action==='check_in'||action==='check_out'){await approvalApi('manager_action',{action_type:action,employee_id:id});}else{const location=emp?.branch==='فرع الرخاوي'?{lat:29.964248,lng:32.5560476,accuracy:5,distance:0}:{lat:29.9631855,lng:32.5572978,accuracy:5,distance:0};await api(action==='break_start'?'break_start':'break_end',{employee_id:id,location,allowed_minutes:Number($('manualBreakMinutes').value||15),motivation_message:'تم بواسطة المدير من لوحة المدير'});} $('manualActionMsg').innerHTML='✅ تم '+labels[action]+' لـ '+esc2(emp?.full_name||'الموظف');await refreshDashboard();}catch(e){$('manualActionMsg').innerHTML='❌ '+esc2(e.message)}}
@@ -535,7 +586,7 @@ async function loadReport(initial=false){
   const total=rs.reduce((sum,r)=>sum+hoursNow(r),0);
   $('grandHours').textContent=total.toFixed(2);$('recordCount').textContent=rs.length;$('avgHours').textContent=rs.length?(total/rs.length).toFixed(2):'0';
   $('reportTable').innerHTML=rs.length?'<table><thead><tr><th>الموظف</th><th>الفرع</th><th>دخول</th><th>انصراف</th><th>الساعات</th><th>الحالة</th><th>إجراء</th></tr></thead><tbody>'+
-   rs.map(r=>'<tr><td><b>'+esc2(r.profiles?.full_name||dashboardEmployees.find(e=>e.id===r.employee_id)?.full_name||'')+'</b><br><small>'+esc2(r.profiles?.department||dashboardEmployees.find(e=>e.id===r.employee_id)?.department||'')+'</small></td><td>'+esc2(r.profiles?.branch||dashboardEmployees.find(e=>e.id===r.employee_id)?.branch||'—')+'</td><td>'+esc2(fmtDate(r.check_in))+'</td><td>'+esc2(r.check_out?fmtDate(r.check_out):'—')+'</td><td>'+esc2(hoursNow(r).toFixed(2))+'</td><td>'+(r.check_out?'مغادر':'<span class="live-online">موجود • الساعات مستمرة</span>')+'</td><td><button class="danger" onclick="deleteAttendanceRecord(\''+esc2(r.id)+'\')">🗑️ حذف</button></td></tr>').join('')+
+   rs.map(r=>'<tr><td><b>'+esc2(r.profiles?.full_name||dashboardEmployees.find(e=>e.id===r.employee_id)?.full_name||'')+'</b><br><small>'+esc2(r.profiles?.department||dashboardEmployees.find(e=>e.id===r.employee_id)?.department||'')+'</small></td><td>'+esc2(r.branch||r.profiles?.branch||dashboardEmployees.find(e=>e.id===r.employee_id)?.branch||'—')+'</td><td>'+esc2(fmtDate(r.check_in))+'</td><td>'+esc2(r.check_out?fmtDate(r.check_out):'—')+'</td><td>'+esc2(hoursNow(r).toFixed(2))+'</td><td>'+(r.check_out?'مغادر':'<span class="live-online">موجود • الساعات مستمرة</span>')+'</td><td><button class="danger" onclick="deleteAttendanceRecord(\''+esc2(r.id)+'\')">🗑️ حذف</button></td></tr>').join('')+
    '</tbody></table>':'<div class="empty">لا توجد سجلات للفترة والاختيارات المحددة</div>';
  }catch(e){$('reportTable').innerHTML='<div class="empty">❌ '+esc2(e.message)+'</div>';}
 }
