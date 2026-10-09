@@ -315,21 +315,40 @@ async function refreshManagerSession(){
 }
 async function login(){
   const btn=document.querySelector('#login button'),msg=$('msg');
+  if(btn){btn.disabled=true;btn.textContent='جاري تسجيل الدخول...';}
   try{
     const email=$('mgrEmail').value.trim(),password=$('mgrPassword').value;
     if(!email||!password)throw Error('اكتب البريد الإلكتروني وكلمة المرور');
-    if(btn){btn.disabled=true;btn.textContent='جاري تسجيل الدخول...';}
     msg.textContent='جاري التحقق من الحساب...';
-    await directManagerLogin(email,password);
-    msg.textContent='تم تسجيل الدخول — جاري تحميل لوحة المدير...';
-    await show();
+    // Keep authentication errors separate from dashboard/API errors. A dashboard
+    // request failing after Auth succeeds must never erase a valid manager session.
+    try{
+      await directManagerLogin(email,password);
+    }catch(authError){
+      token='';refreshToken='';
+      localStorage.removeItem('energy_manager_token');
+      localStorage.removeItem('energy_manager_refresh_token');
+      throw authError;
+    }
+    // Enter the dashboard as soon as Supabase Auth has accepted the credentials.
+    $('login').classList.add('hidden');
+    $('dash').classList.remove('hidden');
     msg.textContent='';
+    try{
+      await show();
+    }catch(dashboardError){
+      console.error('MANAGER_DASHBOARD_START_ERROR',dashboardError);
+      const live=$('liveStatus');
+      if(live){live.textContent='● تعذر تحميل بعض البيانات';live.className='error';}
+      const dashboardMsg=$('managerError');
+      if(dashboardMsg)dashboardMsg.textContent='تم تسجيل الدخول بنجاح، لكن تعذر تحميل بعض بيانات اللوحة: '+(dashboardError?.message||'خطأ غير معروف');
+    }
   }catch(e){
     console.error('MANAGER_LOGIN_ERROR',e);
-    token='';refreshToken='';
-    localStorage.removeItem('energy_manager_token');localStorage.removeItem('energy_manager_refresh_token');
     msg.textContent=e?.message||'تعذر تسجيل الدخول';
-  }finally{if(btn){btn.disabled=false;btn.textContent='دخول المدير';}}
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent='دخول المدير';}
+  }
 }
 async function show(){
   // Authentication success must open the manager UI immediately.
