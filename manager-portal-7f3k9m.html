@@ -468,7 +468,42 @@ async function exportAttendanceRatesCSV(){
 function printAttendanceRates(){
  const box=$('attendanceRates');if(!box||!box.querySelector('table')){alert('احسب معدل التسجيل أولاً');return;}
  const w=window.open('','_blank');if(!w){alert('اسمح بفتح النوافذ المنبثقة للطباعة');return;}
- w.document.write('<html dir="rtl"><head><meta charset="utf-8"><title>معدل التسجيل لكل موظف</title><style>body{font-family:Arial,sans-serif;padding:24px}h2{margin-bottom:16px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #bbb;padding:8px;text-align:right}th{background:#eee}</style></head><body><h2>معدل التسجيل لكل موظف</h2>'+box.innerHTML+'</body></html>');w.document.close();w.focus();w.print();w.close();
+ const logo=document.querySelector('.logo')?.src||'';
+ const from=$('rateFrom').value||cairoDate(),to=$('rateTo').value||from;
+ const branch=$('rateBranchFilter').selectedOptions[0]?.textContent||'كل الفروع';
+ const dept=$('rateDepartmentFilter').selectedOptions[0]?.textContent||'كل الأقسام';
+ const selectedEmployees=staffFilteredEmployees('rate');
+ const employeeLabel=selectedEmployees.length===dashboardEmployees.length?'كل الموظفين':selectedEmployees.map(e=>e.full_name).join('، ');
+ const table=box.querySelector('table').outerHTML;
+ w.document.open();
+ w.document.write(`<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Energy Plus - Attendance Rate Report</title><style>
+ @page{size:A4 landscape;margin:12mm}
+ *{box-sizing:border-box;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+ body{margin:0;background:#fff;color:#17263a;font-family:Arial,Tahoma,sans-serif;font-size:12px}
+ .page{position:relative;min-height:180mm;overflow:hidden;padding:0}
+ .watermark{position:fixed;z-index:0;left:50%;top:48%;width:390px;height:390px;object-fit:contain;transform:translate(-50%,-50%);opacity:.075;pointer-events:none}
+ .content{position:relative;z-index:1}
+ .header{display:flex;align-items:center;gap:18px;padding:15px 20px;background:#07111f;color:#fff;border-bottom:5px solid #e7bd57;border-radius:10px 10px 0 0}
+ .header img{width:76px;height:76px;object-fit:contain;background:#fff;border-radius:8px;padding:4px}
+ .brand{flex:1}.brand h1{font-size:25px;letter-spacing:1px;margin:0 0 6px;color:#e7bd57}.brand h2{font-size:17px;margin:0 0 5px;color:#fff}.brand p{margin:0;color:#d1dae5;font-size:11px}
+ .meta{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0}
+ .meta div{border:1px solid #d8dee7;border-right:3px solid #e7bd57;border-radius:6px;padding:9px 11px;background:rgba(255,255,255,.92)}
+ .meta strong{display:block;color:#6b7787;font-size:10px;margin-bottom:5px}.meta span{font-weight:700;color:#17263a;overflow-wrap:anywhere}
+ table{width:100%;border-collapse:collapse;background:rgba(255,255,255,.94);font-size:11px}
+ thead{display:table-header-group}tr{break-inside:avoid;page-break-inside:avoid}
+ th{background:#10223a!important;color:#fff!important;padding:11px 8px;border:1px solid #263a53;text-align:right}
+ td{padding:10px 8px;border:1px solid #d7dee8;text-align:right;color:#1b2c40}
+ tbody tr:nth-child(even){background:#f1f5f9!important}
+ .footer{margin-top:16px;padding:10px 4px;border-top:2px solid #e7bd57;display:flex;justify-content:space-between;gap:12px;color:#566579;font-size:10px}
+ .credit{font-weight:700;color:#10223a;direction:ltr;text-align:left;white-space:nowrap}
+ @media screen{body{background:#e8edf3;padding:20px}.page{max-width:1100px;margin:auto;background:#fff;padding:18px;box-shadow:0 4px 24px #14243b22}}
+ </style></head><body><div class="page">${logo?'<img class="watermark" src="'+logo+'" alt="">':''}<div class="content">
+ <header class="header">${logo?'<img src="'+logo+'" alt="Energy Plus logo">':''}<div class="brand"><h1>ENERGY PLUS</h1><h2>Attendance Registration Rate Report</h2><p>Employee attendance rate summary</p></div></header>
+ <section class="meta"><div><strong>REPORT PERIOD</strong><span>${from} — ${to}</span></div><div><strong>BRANCH</strong><span>${branch}</span></div><div><strong>DEPARTMENT</strong><span>${dept}</span></div><div style="grid-column:1/-1"><strong>EMPLOYEES INCLUDED</strong><span>${esc2(employeeLabel||'كل الموظفين')}</span></div></section>
+ ${table}
+ <footer class="footer"><span>Energy Plus • Management Report • Generated on ${cairoDate()}</span><span class="credit">Developed by Captain Marwan</span></footer>
+ </div></div><script>window.addEventListener('load',()=>setTimeout(()=>window.print(),350));<\/script></body></html>`);
+ w.document.close();w.focus();
 }
 async function loadReport(initial=false){
  try{
