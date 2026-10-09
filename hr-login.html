@@ -60,16 +60,16 @@ linear-gradient(145deg,#15130d,#090909 62%,#050505)}
     <div class="badges"><div class="badge">الموظفين</div><div class="badge">الحضور والانصراف</div><div class="badge">المرتبات</div><div class="badge">الإجازات</div><div class="badge">السلف والخصومات</div><div class="badge">الدخل اليومي</div><div class="badge">البرايفيت</div><div class="badge">الكباتن والعملاء</div><div class="badge">Sales CRM</div><div class="badge">Targets & Commission</div><div class="badge">التقارير</div></div>
   </section>
   <section class="form-area">
-    <div class="form">
+    <div class="form" autocomplete="off">
       <div class="form-head">
         <div class="mini">مرحباً بيك</div>
         <h2>تسجيل الدخول</h2>
         <p>اكتب بيانات حسابك علشان تدخل للنظام</p>
       </div>
       <label class="label" for="u">البريد الإلكتروني أو اسم المستخدم</label>
-      <input id="u" class="field" placeholder="اكتب البريد الإلكتروني" autocomplete="username" dir="ltr">
+      <input id="u" class="field" placeholder="اكتب البريد الإلكتروني" autocomplete="off" name="login-username" dir="ltr">
       <label class="label" for="p">كلمة المرور</label>
-      <input id="p" class="field" type="password" placeholder="اكتب كلمة المرور" autocomplete="current-password" dir="ltr">
+      <input id="p" class="field" type="password" placeholder="اكتب كلمة المرور" autocomplete="new-password" name="login-password" dir="ltr">
       <button class="btn" id="loginBtn" onclick="login()">دخول للنظام</button>
       <button type="button" class="password-toggle" onclick="togglePassword()">إظهار كلمة المرور</button>
       <div id="err" class="err"></div>
@@ -94,15 +94,11 @@ async function login(){
  if(!r.ok||!j.account){await S.auth.signOut();err.textContent='الحساب غير مفعّل في نظام Energy System';btn?.classList.remove('loading');btn&&(btn.textContent='دخول للنظام');return}
  location.href=j.manager?'./hr.html':'./employee.html'
 }
-S.auth.getSession().then(async({data:{session}})=>{
- if(session){
-  const r=await fetch('https://kfrshaagrcggcjalsjdu.supabase.co/functions/v1/hr-account-api',{method:'POST',headers:{Authorization:'Bearer '+session.access_token,'Content-Type':'application/json'},body:JSON.stringify({action:'me'})});
-  const j=await r.json();
-  if(r.ok&&j.account)location.href=j.manager?'./hr.html':'./employee.html'
- }
-});
+// Shared-device safety: never auto-enter using the previous person's saved session.
+// A user must enter their own credentials on this login screen.
+S.auth.signOut().catch(()=>{});
 function togglePassword(){const p=document.getElementById('p'),b=document.querySelector('.password-toggle');if(!p)return;p.type=p.type==='password'?'text':'password';if(b)b.textContent=p.type==='password'?'إظهار كلمة المرور':'إخفاء كلمة المرور'}
-document.addEventListener('DOMContentLoaded',()=>{document.getElementById('u')?.focus();['u','p'].forEach(id=>document.getElementById(id)?.addEventListener('keydown',e=>{if(e.key==='Enter')login()}));});
+document.addEventListener('DOMContentLoaded',()=>{['u','p'].forEach(id=>document.getElementById(id)?.addEventListener('keydown',e=>{if(e.key==='Enter')login()}));});
 </script>
 </body>
 </html>
