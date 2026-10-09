@@ -102,7 +102,7 @@ async function attendanceAction(mode){
   const button=document.querySelector('[data-attendance-mode="'+mode+'"]');
   if(button)button.disabled=true;
   try{
-    await api("attendance_action",{mode});
+    const ap=data.attendancePermissions?.permissions||{};const branch=document.getElementById("attendanceBranch")?.value||ap.home_branch||data.profile?.branch||"";await api("attendance_action",{mode,branch});
     await reloadPortal();
     alert("تم إرسال "+labels[mode]+" للإدارة. سيتم تحديث الحضور بعد الموافقة.");
   }catch(e){
@@ -125,10 +125,15 @@ function renderSelfAttendance(){
   const pending=requests.filter(x=>x.status==="pending");
   const pendingTypes=new Set(pending.map(x=>x.request_type));
   const latest=rows[0];
+  const ap=data.attendancePermissions?.permissions||{can_check_in:true,can_check_out:true,allowed_branches:[data.profile?.branch].filter(Boolean),home_branch:data.profile?.branch};
+  const allowedBranches=Array.isArray(ap.allowed_branches)?ap.allowed_branches:[];
+  const selectedBranch=open?.branch||ap.home_branch||allowedBranches[0]||"";
+  const branchSelector=allowedBranches.length>1?'<div style="margin:12px 0"><label for="attendanceBranch" class="muted" style="display:block;margin-bottom:6px">فرع تسجيل الحضور والانصراف</label><select id="attendanceBranch">'+allowedBranches.map(b=>'<option value="'+esc(b)+'" '+(b===selectedBranch?'selected':'')+'>'+esc(b)+(b===ap.home_branch?' (الفرع الأساسي)':'')+'</option>').join('')+'</select></div>':(selectedBranch?'<div class="mini" style="margin:12px 0">فرع التسجيل: <b>'+esc(selectedBranch)+'</b></div>':'');
   const currentStatus=open?'مسجل دخول':'غير مسجل دخول';
   el.innerHTML='<div class="attendance-self-card">'+
     '<div class="attendance-head"><div><div class="muted">الموظف</div><h3 style="margin:5px 0">'+esc(data.profile?.full_name||"الموظف")+'</h3><div class="muted">طلبات الحضور تمر على الإدارة قبل اعتمادها.</div></div>'+
     '<div>'+(open?'<span class="pill green">● '+currentStatus+'</span>':'<span class="pill yellow">● '+currentStatus+'</span>')+'</div></div>'+
+    branchSelector+
     '<div class="attendance-actions">'+
     '<button class="btn goldbtn" data-attendance-mode="in" '+(open||pendingTypes.has("in")?'disabled':'')+' onclick="attendanceAction(\'in\')">'+(pendingTypes.has("in")?'⏳ طلب الدخول قيد المراجعة':'🟢 طلب تسجيل دخول')+'</button>'+
     '<button class="btn" data-attendance-mode="break_start" '+(!open||pendingTypes.has("break_start")?'disabled':'')+' onclick="attendanceAction(\'break_start\')">'+(pendingTypes.has("break_start")?'⏳ طلب البريك قيد المراجعة':'☕ طلب بدء بريك')+'</button>'+
@@ -140,8 +145,8 @@ function renderSelfAttendance(){
     '</div>'+
     (requests.length?'<div class="attendance-history"><h3>سجل طلبات الحضور</h3>'+requests.slice(0,20).map(x=>'<div class="row"><div><b>'+attendanceRequestLabel(x.request_type)+'</b><div class="muted">'+new Date(x.requested_at).toLocaleString("ar-EG")+'</div></div><div>'+attendanceRequestStatus(x.status)+(x.rejection_reason?'<div class="muted" style="margin-top:4px">'+esc(x.rejection_reason)+'</div>':'')+'</div></div>').join('')+'</div>':'');
 }
-async function reloadPortal(){data=await api('employee_portal');render()}
-async function boot(){let g=await S.auth.getSession();session=g.data.session;if(!session){location.href='./hr-login.html';return}let me=await api('me');if(me.manager){location.href='./hr.html';return}perms=me.account.permissions||{};data=await api('employee_portal');await api('calculate_daily_earning',{employee_id:data.profile.id,work_date:new Date().toISOString().slice(0,10)});data.finance=await api('employee_360',{employee_id:data.profile.id});const ns=await api('employee_notifications');data.notifications=ns.notifications||[];const rq=await api('employee_requests');data.employeeRequests=rq.requests||[];let items=[['dashboard','📊 الرئيسية',true],['tasks','✅ مهامي',perms.tasks],['attendance','🕒 حضوري',perms.attendance],['performance','⭐ أدائي',perms.performance],['coach','🏋️ عملائي',canCoachFeature()],['leave','🏖️ الإجازات',true],['requests','📋 طلباتي',true],['finance','💰 دخلي',true],['profile','👤 بياناتي',true]];document.getElementById('nav').innerHTML=items.filter(x=>x[2]).map((x,i)=>'<button type="button" data-section="'+x[0]+'" class="'+(!i?'active':'')+'" onclick="show(\''+x[0]+'\',this)">'+x[1]+'</button>').join('');await loadLeaveTypes();if(canCoachFeature())await loadCoachData();render()}
+async function reloadPortal(){data=await api('employee_portal');data.attendancePermissions=await api('attendance_permissions');render()}
+async function boot(){let g=await S.auth.getSession();session=g.data.session;if(!session){location.href='./hr-login.html';return}let me=await api('me');if(me.manager){location.href='./hr.html';return}perms=me.account.permissions||{};data=await api('employee_portal');data.attendancePermissions=await api('attendance_permissions');await api('calculate_daily_earning',{employee_id:data.profile.id,work_date:new Date().toISOString().slice(0,10)});data.finance=await api('employee_360',{employee_id:data.profile.id});const ns=await api('employee_notifications');data.notifications=ns.notifications||[];const rq=await api('employee_requests');data.employeeRequests=rq.requests||[];let items=[['dashboard','📊 الرئيسية',true],['tasks','✅ مهامي',perms.tasks],['attendance','🕒 حضوري',perms.attendance],['performance','⭐ أدائي',perms.performance],['coach','🏋️ عملائي',canCoachFeature()],['leave','🏖️ الإجازات',true],['requests','📋 طلباتي',true],['finance','💰 دخلي',true],['profile','👤 بياناتي',true]];document.getElementById('nav').innerHTML=items.filter(x=>x[2]).map((x,i)=>'<button type="button" data-section="'+x[0]+'" class="'+(!i?'active':'')+'" onclick="show(\''+x[0]+'\',this)">'+x[1]+'</button>').join('');await loadLeaveTypes();if(canCoachFeature())await loadCoachData();render()}
 async function logout(){await S.auth.signOut();location.href='./hr-login.html'}boot().catch(e=>document.body.innerHTML='<div style="padding:40px;text-align:center">❌ '+esc(e.message)+'</div>');</script><script>
 (function(){
   function setupMobileNav(){
