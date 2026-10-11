@@ -110,10 +110,10 @@ const SUPABASE_PUBLISHABLE_KEY='sb_publishable_mKftrB-itebmeA-bdtt6dw_Q3QnxH0_';
 const F=SUPABASE_URL+'/functions/v1/employee-kiosk';
 const MANAGER_API=SUPABASE_URL+'/functions/v1/manager-dashboard-api';
 const MANAGER_ACCESS_API=SUPABASE_URL+'/functions/v1/manager-access-api';
-let managerAccess={permissions:{},branches:[]},managerAccountsCache=[];let employeePermissionsLoaded=false,employeePermissionBranches=[];let managerAdminPanelLoaded=false;
+let managerAccess={permissions:{},branches:[]},managerAccountsCache=[];let employeePermissionsLoaded=false,employeePermissionBranches=[];let managerAdminPanelLoaded=false;let managerAdminPanelLoading=false,employeePermissionsLoading=false;
 async function managerAccessApi(action,body={},retry=true){
   try{return await fetchJson(MANAGER_ACCESS_API,{method:'POST',headers:{'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},body:JSON.stringify({action,...body})});}
-  catch(e){if(retry&&token&&String(e.message).includes('غير مصرح')){if(await refreshManagerSession())return managerAccessApi(action,body,false)}throw e}
+  catch(e){if(retry&&token&&(e.status===401||String(e.message).includes('غير مصرح'))){if(await refreshManagerSession())return managerAccessApi(action,body,false)}throw e}
 }
 function hasAccess(k){
  const p=managerAccess?.permissions||{};
@@ -132,7 +132,8 @@ function applyPermissionTreeDefaults(){
  });
 }
 async function loadEmployeePermissionTable(){
- const host=$('employeePermissionsTable'),msg=$('employeePermissionsMsg');if(!host)return;
+ const host=$('employeePermissionsTable'),msg=$('employeePermissionsMsg');if(!host||employeePermissionsLoading)return;
+ employeePermissionsLoading=true;
  host.innerHTML='<div class="empty">جاري تحميل الصلاحيات...</div>';msg.textContent='';
  try{
   const j=await api('manager_employee_permissions');employeePermissionBranches=j.branches||[];
@@ -148,10 +149,10 @@ async function loadEmployeePermissionTable(){
     '<td>'+esc2(home||'غير محدد')+'</td><td>'+
     '<label class="permission-toggle"><input type="checkbox" data-emp-perm-in="'+esc2(e.id)+'" '+(p.can_check_in!==false?'checked':'')+'> <span>تسجيل حضور</span></label><br>'+
     '<label class="permission-toggle"><input type="checkbox" data-emp-perm-out="'+esc2(e.id)+'" '+(p.can_check_out!==false?'checked':'')+'> <span>تسجيل انصراف</span></label></td>'+
-    '<td>'+branchChecks+'</td><td><div class="permission-actions"><button class="primary" onclick="saveEmployeePermissionRow(\''+esc2(e.id)+'\')">💾 حفظ</button><button class="danger" onclick="deleteEmployee(\''+esc2(e.id)+'\',\''+esc2(e.full_name)+'\')">🗑️ حذف الموظف</button></div></td></tr>';
+    '<td>'+branchChecks+'</td><td><div class="permission-actions"><button class="primary" onclick="saveEmployeePermissionRow(\''+esc2(e.id)+'\')">💾 حفظ</button>'+(managerAccess.role==='admin'?'<button class="danger" onclick="deleteEmployee(\''+esc2(e.id)+'\',\''+esc2(e.full_name)+'\')">🗑️ حذف الموظف</button>':'')+'</div></td></tr>';
    }).join('')+'</tbody></table>':'<div class="empty">لا يوجد موظفون نشطون.</div>';
   employeePermissionsLoaded=true;
- }catch(e){msg.textContent='❌ '+esc2(e.message);host.innerHTML='<div class="empty">تعذر تحميل جدول الصلاحيات.</div>';}
+ }catch(e){msg.textContent='❌ '+esc2(e.message);host.innerHTML='<div class="empty">تعذر تحميل جدول الصلاحيات.</div>';}finally{employeePermissionsLoading=false;}
 }
 async function saveEmployeePermissionRow(id){
  const row=document.querySelector('[data-permission-row="'+id+'"]');if(!row)return;
@@ -194,7 +195,8 @@ function applyManagerAccess(){
   document.querySelectorAll('#managerControlPanel button').forEach(b=>{if(!b.classList.contains('hidden'))b.disabled=false;});
 }
 async function loadManagerAdminPanel(){
-  if(managerAccess.role!=='admin')return;
+  if(managerAccess.role!=='admin'||managerAdminPanelLoading)return;
+  managerAdminPanelLoading=true;
   try{
     const [bs,ms,ds]=await Promise.all([managerAccessApi('branches'),managerAccessApi('list_managers'),managerAccessApi('departments')]);
     managerAccountsCache=ms.managers||[];
@@ -203,7 +205,7 @@ async function loadManagerAdminPanel(){
     renderManagerDepartments(ds.departments||[]);
     renderManagerAccounts();
     managerAdminPanelLoaded=true;
-  }catch(e){managerAdminPanelLoaded=false;$('managerAccountMsg').textContent='❌ '+e.message}
+  }catch(e){managerAdminPanelLoaded=false;$('managerAccountMsg').textContent='❌ '+e.message}finally{managerAdminPanelLoading=false;}
 }
 function renderManagerBranches(names,selected){
   $('managerBranchChecks').innerHTML=names.map(n=>'<label class="access-check"><input type="checkbox" data-branch="'+esc(n)+'" '+(selected.includes(n)?'checked':'')+'><span>'+esc(n)+'</span></label>').join('')||'<div class="empty">لا توجد فروع.</div>';
@@ -250,7 +252,7 @@ async function fetchJson(url,options={},timeoutMs=12000){
     const r=await fetch(url,{...options,signal:ctrl.signal});
     const raw=await r.text();
     let j={}; try{j=raw?JSON.parse(raw):{}}catch(_){j={error:raw||'استجابة غير مفهومة من الخادم'};}
-    if(!r.ok) throw Error(j.error||j.message||('HTTP '+r.status));
+    if(!r.ok) {const error=Error(j.error_description||j.error||j.message||('HTTP '+r.status));error.status=r.status;throw error;}
     return j;
   }catch(e){
     if(e?.name==='AbortError') throw Error('انتهت مهلة الاتصال بالخادم. اضغط حاول مرة أخرى.');
@@ -263,7 +265,7 @@ async function api(action,body={},retry=true){
   try{
     return await fetchJson(endpoint,{method:'POST',headers:{'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},body:JSON.stringify({action,...body})});
   }catch(e){
-    if(retry&&token&&String(e.message).includes('غير مصرح')){
+    if(retry&&token&&(e.status===401||String(e.message).includes('غير مصرح'))){
       if(await refreshManagerSession()) return api(action,body,false);
     }
     throw e;
@@ -275,7 +277,7 @@ async function approvalApi(action,body={},retry=true){
   try{
     return await fetchJson(endpoint,{method:'POST',headers:{'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},body:JSON.stringify({action,...body})});
   }catch(e){
-    if(retry&&token&&String(e.message).includes('غير مصرح')){
+    if(retry&&token&&(e.status===401||String(e.message).includes('غير مصرح'))){
       if(await refreshManagerSession()) return approvalApi(action,body,false);
     }
     throw e;
@@ -285,7 +287,7 @@ function storeManagerSession(j){
   token=j?.access_token||j?.session?.access_token||'';
   refreshToken=j?.refresh_token||j?.session?.refresh_token||'';
   if(token)localStorage.setItem('energy_manager_token',token);else localStorage.removeItem('energy_manager_token');
-  if(refreshToken)localStorage.setItem('energy_manager_refresh_token',refreshToken);
+  if(refreshToken)localStorage.setItem('energy_manager_refresh_token',refreshToken);else localStorage.removeItem('energy_manager_refresh_token');
 }
 async function restoreManagerSession(){const saved=localStorage.getItem('energy_manager_token')||'';const rt=localStorage.getItem('energy_manager_refresh_token')||'';if(!saved)return false;token=saved;refreshToken=rt;try{await api('manager_summary',{},false);return true}catch(_){if(await refreshManagerSession()){try{await api('manager_summary',{},false);return true}catch(__){}}token='';refreshToken='';localStorage.removeItem('energy_manager_token');localStorage.removeItem('energy_manager_refresh_token');return false}}
 async function directManagerLogin(email,password){
@@ -301,7 +303,12 @@ async function directManagerLogin(email,password){
   storeManagerSession(j);
   return {session:j};
 }
-async function refreshManagerSession(){
+let managerRefreshPromise=null;
+function refreshManagerSession(){
+ if(!managerRefreshPromise)managerRefreshPromise=performManagerSessionRefresh().finally(()=>{managerRefreshPromise=null;});
+ return managerRefreshPromise;
+}
+async function performManagerSessionRefresh(){
   const rt=refreshToken||localStorage.getItem('energy_manager_refresh_token')||'';
   if(!rt)return false;
   try{
@@ -389,18 +396,7 @@ async function telegramStatus(){try{const j=await api('manager_telegram_status')
  '@page{size:A4 landscape;margin:12mm}*{box-sizing:border-box;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}body{margin:0;background:#fff;color:#17263a;font-family:Arial,Tahoma,sans-serif;font-size:12px}.page{position:relative;min-height:180mm;overflow:hidden}.watermark{position:fixed;z-index:0;left:50%;top:48%;width:390px;height:390px;object-fit:contain;transform:translate(-50%,-50%);opacity:.075;pointer-events:none}.content{position:relative;z-index:1}.header{display:flex;align-items:center;gap:18px;padding:15px 20px;background:#07111f;color:#fff;border-bottom:5px solid #e7bd57;border-radius:10px 10px 0 0}.header img{width:76px;height:76px;object-fit:contain;background:#fff;border-radius:8px;padding:4px}.brand{flex:1}.brand h1{font-size:25px;letter-spacing:1px;margin:0 0 6px;color:#e7bd57}.brand h2{font-size:17px;margin:0 0 5px;color:#fff}.brand p{margin:0;color:#d1dae5;font-size:11px}.meta{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0}.meta div{border:1px solid #d8dee7;border-right:3px solid #e7bd57;border-radius:6px;padding:9px 11px;background:rgba(255,255,255,.94)}.meta strong{display:block;color:#6b7787;font-size:10px;margin-bottom:5px}.meta span{font-weight:700;color:#17263a;overflow-wrap:anywhere}h3{margin:16px 0 8px;color:#10223a;font-size:14px}table{width:100%;border-collapse:collapse;background:rgba(255,255,255,.96);font-size:11px;margin-bottom:12px}thead{display:table-header-group}tr{break-inside:avoid;page-break-inside:avoid}th{background:#10223a!important;color:#fff!important;padding:9px 8px;border:1px solid #263a53;text-align:right}td{padding:8px;border:1px solid #d7dee8;text-align:right;color:#1b2c40}tbody tr:nth-child(even){background:#f1f5f9!important}.footer{margin-top:16px;padding:10px 4px;border-top:2px solid #e7bd57;display:flex;justify-content:space-between;gap:12px;color:#566579;font-size:10px}.credit{font-weight:700;color:#10223a;direction:ltr;text-align:left;white-space:nowrap}@media screen{body{background:#e8edf3;padding:20px}.page{max-width:1100px;margin:auto;background:#fff;padding:18px;box-shadow:0 4px 24px #14243b22}}'+
  '</style></head><body><div class="page">'+(logo?'<img class="watermark" src="'+logo+'" alt="">':'')+'<div class="content"><header class="header">'+(logo?'<img src="'+logo+'" alt="Energy Plus logo">':'')+'<div class="brand"><h1>ENERGY PLUS</h1><h2>'+esc(title)+'</h2><p>Attendance and working-hours report</p></div></header><section class="meta"><div><strong>REPORT PERIOD</strong><span>'+esc(from)+' — '+esc(to)+'</span></div><div><strong>BRANCH</strong><span>'+esc(branchLabel)+'</span></div><div><strong>DEPARTMENT</strong><span>'+esc(deptLabel)+'</span></div><div style="grid-column:1/-1"><strong>EMPLOYEES INCLUDED</strong><span>'+esc(employees)+'</span></div></section><h3>ملخص ساعات العمل</h3><table><thead><tr><th>الموظف</th><th>الفرع</th><th>القسم</th><th>إجمالي الساعات</th></tr></thead><tbody>'+summaryRows+'</tbody></table><h3>تفاصيل الحضور والانصراف</h3><table><thead><tr><th>الموظف</th><th>تاريخ ووقت الحضور</th><th>تاريخ ووقت الانصراف</th><th>الساعات</th><th>الحالة</th></tr></thead><tbody>'+detailRows+'</tbody></table><footer class="footer"><span>Energy Plus • Management Report • Generated on '+(typeof cairoDate==='function'?cairoDate():new Date().toISOString().slice(0,10))+'</span><span class="credit">Developed by Captain Marwan</span></footer></div></div><script>window.addEventListener("load",()=>setTimeout(()=>window.print(),350));<\/script></body></html>');
  w.document.close();w.focus();
-}function printEmployee(){if(!rows.length)return alert('اعرض التقرير أولاً');let id=$('employeeFilter').value;if(!id)return alert('اختر موظفًا أولاً');buildPrint(id)}function printAll(){if(!rows.length)return alert('اعرض التقرير أولاً');buildPrint()}(async()=>{
-  token=localStorage.getItem('energy_manager_token')||'';
-  refreshToken=localStorage.getItem('energy_manager_refresh_token')||'';
-  if(token){
-    try{await api('manager_summary');await show();}
-    catch(_){
-      if(await refreshManagerSession()){
-        try{await api('manager_summary');await show();}catch(e){token='';}
-      }else{token='';}
-    }
-  }
-})();;
+}function printEmployee(){if(!rows.length)return alert('اعرض التقرير أولاً');let id=$('employeeFilter').value;if(!id)return alert('اختر موظفًا أولاً');buildPrint(id)}function printAll(){if(!rows.length)return alert('اعرض التقرير أولاً');buildPrint()}
 let dashboardRows=[],liveRows=[],dashboardRequests=[],dashboardEmployees=[],reportRows=[];
 function cairoDate(){const p=new Intl.DateTimeFormat('en-GB',{timeZone:'Africa/Cairo',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());const v=Object.fromEntries(p.filter(x=>x.type!=='literal').map(x=>[x.type,x.value]));return v.year+'-'+v.month+'-'+v.day;}function cairoTime(v=new Date()){return new Intl.DateTimeFormat('ar-EG',{timeZone:'Africa/Cairo',hour:'numeric',minute:'2-digit',hour12:true}).format(v);}
 function esc2(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
@@ -410,11 +406,12 @@ let liveTimer=null;let liveRefreshing=false;function startLiveDashboard(){if(liv
   // Report tables refresh only on demand to prevent flicker during live dashboard updates.
   const sj=await api('manager_summary');
   managerAccess=sj.access||managerAccess;
-  managerAccess.role=managerAccess.role||((managerAccess.branches||[]).includes('*')?'admin':'manager');
-  dashboardEmployees=sj.employees||[];
+  managerAccess.role=managerAccess.role||'manager';
+  dashboardEmployees=(sj.employees||[]).filter(employeeWithinManagerScope);
   updateLiveBranchFilter();
   applyManagerAccess();
-  if(managerAccess.role==='admin'){if(!managerAdminPanelLoaded)loadManagerAdminPanel();if(!employeePermissionsLoaded)loadEmployeePermissionTable();}
+  if(managerAccess.role==='admin'&&!managerAdminPanelLoaded)loadManagerAdminPanel();
+  if((managerAccess.role==='admin'||hasAccess('manage_employee_permissions'))&&!employeePermissionsLoaded)loadEmployeePermissionTable();
   dashboardRequests=sj.requests||[];
   dashboardBreaks=sj.breaks||[];
   dashboardBreakIds=new Set(dashboardBreaks.filter(x=>!x.ended_at).map(x=>x.employee_id));
@@ -487,6 +484,12 @@ function getEmployeeState(e){
  if(latest && latest.check_out) return {key:'left',label:'انصرف',className:'left',row:latest,detail:fmtDate(latest.check_out)};
  return {key:'absent',label:'غير مسجل',className:'absent',row:null,detail:'لا يوجد تسجيل حضور اليوم'};
 }
+function employeeWithinManagerScope(e){
+ if(managerAccess.role==='admin')return true;
+ const branches=Array.isArray(managerAccess.branches)?managerAccess.branches:[];
+ const departments=managerAccess.permissions?.allowed_departments;
+ return (branches.includes('*')||branches.includes(String(e.branch||'').trim()))&&(Array.isArray(departments)&&(departments.includes('*')||departments.includes(e.department)));
+}
 function updateLiveBranchFilter(){
  const el=$('liveBranchFilter');if(!el)return;
  const old=el.value;
@@ -498,7 +501,7 @@ function updateLiveBranchFilter(){
 }
 function renderLiveBoard(){
  const branch=$('liveBranchFilter').value,status=$('liveStatusFilter').value;
- const list=dashboardEmployees.filter(e=>!branch||e.branch===branch).map(e=>({e,state:getEmployeeState(e)}));
+ const list=dashboardEmployees.filter(e=>employeeWithinManagerScope(e)&&(!branch||String(e.branch||'').trim()===branch)).map(e=>({e,state:getEmployeeState(e)}));
  const present=list.filter(x=>x.state.key==='present'||x.state.key==='pending-out');
  const left=list.filter(x=>x.state.key==='left');
  const breaks=list.filter(x=>x.state.key==='break');
