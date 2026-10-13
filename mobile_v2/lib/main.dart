@@ -66,7 +66,7 @@ class _TasksState extends State<Tasks> {
  @override void initState(){super.initState();refresh();}
  void refresh(){rows=load();setState((){});}
  Future<List<Map<String,dynamic>>> load()async{
- var q=api.from('performance_tasks').select('id,employee_id,title,description,status,due_date,completed_at,created_at');
+ var q=api.from('performance_tasks').select('id,employee_id,title,description,status,due_date,completed_at,created_at,profiles!performance_tasks_employee_id_fkey(full_name)');
  if(!widget.manager)q=q.eq('employee_id',widget.profile['id']);
  return List<Map<String,dynamic>>.from(await q.order('created_at',ascending:false).limit(250));
  }
@@ -94,13 +94,13 @@ class _TasksState extends State<Tasks> {
  title.dispose();description.dispose();
  }
  @override Widget build(BuildContext context)=>Directionality(textDirection:TextDirection.rtl,child:Scaffold(
- appBar:AppBar(title:const Text('المهام اليومية')),
+ appBar:AppBar(title:const Text('المهام اليومية'),actions:[IconButton(tooltip:'تحديث الإنجازات',onPressed:refresh,icon:const Icon(Icons.refresh))]),
  floatingActionButton:widget.manager?FloatingActionButton.extended(onPressed:add,label:const Text('مهمة جديدة'),icon:const Icon(Icons.add)):null,
  body:FutureBuilder(future:rows,builder:(context,s){
  if(s.hasError)return Center(child:Text('Error: '+s.error.toString()));
  if(!s.hasData)return const Center(child:CircularProgressIndicator());
  return RefreshIndicator(onRefresh:()async{refresh();await rows;},child:ListView(children:s.data!.map((t)=>Card(child:ListTile(
- title:Text(t['title'].toString()),subtitle:Text((t['description']??'').toString()+' | '+t['status'].toString()),
+ title:Text(t['title'].toString()),subtitle:Text((widget.manager ? ((t['profiles']?['full_name']??'').toString()+' | ') : '')+(t['description']??'').toString()+' | '+t['status'].toString()+(t['completed_at']!=null?' | تم: '+t['completed_at'].toString():'')),
  trailing:!widget.manager&&t['status']!='done'?IconButton(icon:const Icon(Icons.check_circle_outline),onPressed:()=>complete(t)):null))).toList()));
  })));
 }
