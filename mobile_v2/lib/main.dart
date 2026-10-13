@@ -112,7 +112,7 @@ class StaffList extends StatelessWidget {
  if(s.hasError)return Center(child:Text(s.error.toString()));
  if(!s.hasData)return const Center(child:CircularProgressIndicator());
  return ListView(children:s.data!.map((p)=>ListTile(title:Text(p['full_name'].toString()),subtitle:Text((p['department']??'').toString()+' / '+(p['branch']??'').toString()))).toList());
- })));
+ }));
 }
 
 class ManagerNotifications extends StatefulWidget {
