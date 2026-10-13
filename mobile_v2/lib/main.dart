@@ -51,7 +51,7 @@ class Dashboard extends StatelessWidget {
  Card(child:ListTile(title:const Text('المهام اليومية'),leading:const Icon(Icons.task_alt),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>Tasks(profile:p,manager:manager))))),
  if(manager)Card(child:ListTile(title:const Text('إدارة الموظفين'),leading:const Icon(Icons.people),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const StaffList())))),
  if(manager)Card(child:ListTile(title:const Text('إشعارات إنجاز المهام'),leading:const Icon(Icons.notifications_active),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const ManagerNotifications())))),
- if(manager||dept.contains('sales')||dept.contains('سيلز'))const Card(child:ListTile(title:Text('السيلز'),subtitle:Text('العملاء، التارجت، المكالمات، العمولات — قيد الربط الآمن'))),
+ if(manager||dept.contains('sales')||dept.contains('سيلز'))Card(child:ListTile(title:const Text('السيلز'),subtitle:const Text('التارجت اليومي وسكريبتات المكالمات'),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const SalesWorkspace())))),
  if(manager||dept.contains('coach')||dept.contains('trainer')||dept.contains('مدرب'))const Card(child:ListTile(title:Text('المدربين'),subtitle:Text('الجلسات وتأكيد العملاء والتقييمات — قيد الربط الآمن'))),
  const Card(child:ListTile(title:Text('الحضور والانصراف'),subtitle:Text('قيد الربط بواجهة آمنة — لا يستخدم API الموقع القديم'))),
  ])));
@@ -143,5 +143,42 @@ class _ManagerNotificationsState extends State<ManagerNotifications> {
        subtitle:Text(n['message'].toString()+'\n'+n['created_at'].toString())
       ))).toList()));
   })
+ ));
+}
+
+class SalesWorkspace extends StatelessWidget {
+ const SalesWorkspace({super.key});
+ @override Widget build(BuildContext context)=>Directionality(textDirection:TextDirection.rtl,child:Scaffold(
+  appBar:AppBar(title:const Text('قسم السيلز')),
+  body:ListView(padding:const EdgeInsets.all(16),children:[
+   const Text('التارجت اليومي',style:TextStyle(fontSize:22,fontWeight:FontWeight.bold)),
+   FutureBuilder(future:api.from('sales_daily_targets')
+     .select('target_date,total_calls_target,expired_target,old_target,social_target,invitation_target,tour_target,followup_target')
+     .eq('sales_user_id',api.auth.currentUser!.id)
+     .order('target_date',ascending:false).limit(1),
+    builder:(context,s){
+     if(s.hasError)return ListTile(title:const Text('تعذر تحميل التارجت'),subtitle:Text(s.error.toString()));
+     if(!s.hasData)return const LinearProgressIndicator();
+     if(s.data!.isEmpty)return const ListTile(title:Text('لم يتم تحديد تارجت لهذا الحساب'));
+     final t=s.data!.first;
+     return Card(child:Column(children:[
+      ListTile(title:Text('التاريخ: '+t['target_date'].toString()),subtitle:Text('إجمالي المكالمات: '+t['total_calls_target'].toString())),
+      ListTile(title:Text('متابعة: '+t['followup_target'].toString()),subtitle:Text('زيارات: '+t['tour_target'].toString()+' | دعوات: '+t['invitation_target'].toString())),
+     ]));
+    }),
+   const SizedBox(height:20),
+   const Text('سكريبتات المكالمات',style:TextStyle(fontSize:22,fontWeight:FontWeight.bold)),
+   FutureBuilder(future:api.from('sales_scripts').select('title,script,source').eq('active',true).order('title'),
+    builder:(context,s){
+     if(s.hasError)return ListTile(title:const Text('تعذر تحميل السكريبتات'),subtitle:Text(s.error.toString()));
+     if(!s.hasData)return const LinearProgressIndicator();
+     return Column(children:s.data!.map((row)=>Card(child:ExpansionTile(
+      title:Text(row['title'].toString()),
+      subtitle:Text(row['source'].toString()),
+      children:[Padding(padding:const EdgeInsets.all(16),child:SelectableText(row['script'].toString()))],
+     ))).toList());
+    }),
+   const ListTile(title:Text('العملاء والعمولات'),subtitle:Text('قيد مراجعة صلاحيات البيانات قبل عرضها داخل التطبيق')),
+  ]),
  ));
 }
