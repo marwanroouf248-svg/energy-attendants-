@@ -53,7 +53,7 @@ class Dashboard extends StatelessWidget {
  if(manager)Card(child:ListTile(title:const Text('إشعارات إنجاز المهام'),leading:const Icon(Icons.notifications_active),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const ManagerNotifications())))),
  if(manager||dept.contains('sales')||dept.contains('سيلز'))Card(child:ListTile(title:const Text('السيلز'),subtitle:const Text('التارجت اليومي وسكريبتات المكالمات'),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const SalesWorkspace())))),
  if(manager||dept.contains('coach')||dept.contains('trainer')||dept.contains('مدرب'))const Card(child:ListTile(title:Text('المدربين'),subtitle:Text('الجلسات وتأكيد العملاء والتقييمات — قيد الربط الآمن'))),
- const Card(child:ListTile(title:Text('الحضور والانصراف'),subtitle:Text('قيد الربط بواجهة آمنة — لا يستخدم API الموقع القديم'))),
+ Card(child:ListTile(title:const Text('سجل الحضور والانصراف'),subtitle:const Text('حالة الشفت وسجل آخر العمليات — عرض فقط'),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>AttendanceHistory(profile:p,manager:manager))))),
  ])));
  });
 }
@@ -180,5 +180,50 @@ class SalesWorkspace extends StatelessWidget {
     }),
    const ListTile(title:Text('العملاء والعمولات'),subtitle:Text('قيد مراجعة صلاحيات البيانات قبل عرضها داخل التطبيق')),
   ]),
+ ));
+}
+
+class AttendanceHistory extends StatefulWidget {
+ final Map<String,dynamic> profile;
+ final bool manager;
+ const AttendanceHistory({super.key,required this.profile,required this.manager});
+ @override State<AttendanceHistory> createState()=>_AttendanceHistoryState();
+}
+class _AttendanceHistoryState extends State<AttendanceHistory> {
+ late Future<List<Map<String,dynamic>>> history;
+ @override void initState(){super.initState();refresh();}
+ void refresh(){history=fetch();setState((){});}
+ Future<List<Map<String,dynamic>>> fetch()async{
+  var q=api.from('attendance').select('id,employee_id,check_in,check_out,branch,profiles!attendance_employee_id_fkey(full_name)');
+  if(!widget.manager)q=q.eq('employee_id',widget.profile['id']);
+  return List<Map<String,dynamic>>.from(await q.order('check_in',ascending:false).limit(100));
+ }
+ String time(dynamic v) {
+  if(v==null)return 'لم يسجل';
+  final parsed=DateTime.tryParse(v.toString());
+  if(parsed==null)return v.toString();
+  final local=parsed.toLocal();
+  return local.toString().substring(0,16);
+ }
+ @override Widget build(BuildContext context)=>Directionality(textDirection:TextDirection.rtl,child:Scaffold(
+  appBar:AppBar(title:const Text('سجل الحضور'),actions:[IconButton(onPressed:refresh,icon:const Icon(Icons.refresh))]),
+  body:FutureBuilder(future:history,builder:(context,s){
+   if(s.hasError)return Center(child:Text('تعذر تحميل الحضور: '+s.error.toString()));
+   if(!s.hasData)return const Center(child:CircularProgressIndicator());
+   if(s.data!.isEmpty)return const Center(child:Text('لا توجد سجلات حضور'));
+   final open=s.data!.where((e)=>e['check_out']==null).length;
+   return RefreshIndicator(onRefresh:()async{refresh();await history;},child:ListView(
+    padding:const EdgeInsets.all(12),children:[
+     Card(child:ListTile(title:Text(widget.manager?'الموظفون في الشفت (آخر 100 سجل)':'حالة الشفت'),
+      subtitle:Text(widget.manager?'سجلات مفتوحة في النتائج: '+open.toString():
+       (open>0?'داخل الشفت':'لا يوجد شفت مفتوح')))),
+     ...s.data!.map((row)=>Card(child:ListTile(
+      leading:Icon(row['check_out']==null?Icons.login:Icons.history,color:row['check_out']==null?Colors.green:Colors.amber),
+      title:Text(widget.manager?(row['profiles']?['full_name']??'موظف').toString():(row['branch']??'الحضور').toString()),
+      subtitle:Text('دخول: '+time(row['check_in'])+'\nانصراف: '+time(row['check_out'])+
+        '\nالفرع: '+(row['branch']??'غير محدد').toString()),
+     ))),
+    ]));
+  })
  ));
 }
