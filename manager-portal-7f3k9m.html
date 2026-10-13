@@ -472,17 +472,17 @@ function renderRequests(){
 let bulkApprovalRunning=false;
 async function approveAllAttendanceRequests(){
  if(bulkApprovalRunning||!hasAccess('approve_requests'))return;
- const queue=(dashboardRequests||[]).filter(r=>r.status==='pending'&&(r.request_type==='check_in'||r.request_type==='check_out')).sort((a,b)=>new Date(a.requested_at)-new Date(b.requested_at));
+ const queue=(dashboardRequests||[]).filter(r=>r.status==='pending'&&(r.request_type==='check_in'||r.request_type==='check_out')).sort((a,b)=>(a.request_type==='check_in'?0:1)-(b.request_type==='check_in'?0:1)||new Date(a.requested_at)-new Date(b.requested_at));
  if(!queue.length)return alert('لا توجد طلبات حضور أو انصراف معلقة.');
  if(!confirm('هل تريد اعتماد '+queue.length+' طلب حضور وانصراف؟ سيتم احتساب الشفتات بعد الاعتماد. الطلبات الخاصة بالبريك غير مشمولة.'))return;
  bulkApprovalRunning=true;stopLiveDashboard();
  const btn=$('approveAllAttendanceBtn');if(btn){btn.disabled=true;btn.style.display='inline-block';}
- let success=0;const failures=[];
+ let success=0;const failures=[];const failedCheckIns=new Set();
  try{
   for(let i=0;i<queue.length;i++){
-   const req=queue[i];if(btn)btn.textContent='جاري اعتماد '+(i+1)+' / '+queue.length;
+   const req=queue[i];if(req.request_type==='check_out'&&failedCheckIns.has(req.employee_id)){failures.push((req.profiles?.full_name||req.id)+': لم يُعتمد الحضور، لذلك لم يُعتمد الانصراف');continue;}if(btn)btn.textContent='جاري اعتماد '+(i+1)+' / '+queue.length;
    try{const result=await approvalApi('manager_decide',{request_id:req.id,decision:'approve'});if(result?.ok!==true)throw Error(result?.error||'لم يتم تأكيد الاعتماد');success++;}
-   catch(e){failures.push((req.profiles?.full_name||req.id)+': '+(e?.message||e));}
+   catch(e){if(req.request_type==='check_in')failedCheckIns.add(req.employee_id);failures.push((req.profiles?.full_name||req.id)+': '+(e?.message||e));}
   }
  }finally{
   bulkApprovalRunning=false;if(btn)btn.disabled=false;
