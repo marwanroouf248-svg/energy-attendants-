@@ -28,7 +28,7 @@ jobs:
         run: flutter analyze lib/main.dart
       - name: Build unsigned development APK
         working-directory: mobile_v2
-        run: flutter build apk --debug --dart-define=SUPABASE_URL=https://kfrshaagrcggcjalsjdu.supabase.co --dart-define=SUPABASE_PUBLISHABLE_KEY=${{ secrets.ENERGY_PLUS_SUPABASE_PUBLISHABLE_KEY }}
+        run: flutter build apk --debug --dart-define=SUPABASE_URL=https://kfrshaagrcggcjalsjdu.supabase.co --dart-define=SUPABASE_PUBLISHABLE_KEY=sb_publishable_mKftrB-itebmeA-bdtt6dw_Q3QnxH0_
       - name: Upload development APK
         uses: actions/upload-artifact@v4
         with:
