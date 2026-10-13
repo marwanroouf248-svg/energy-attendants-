@@ -7,7 +7,7 @@ Future<void> main() async {
  const url = String.fromEnvironment('SUPABASE_URL');
  const key = String.fromEnvironment('SUPABASE_PUBLISHABLE_KEY');
  if(url.isEmpty || key.isEmpty) { runApp(const MaterialApp(home: Scaffold(body: Center(child: Text('Missing Supabase configuration'))))); return; }
- await Supabase.initialize(url:url, anonKey:key);
+ await Supabase.initialize(url:url, publishableKey:key);
  runApp(const EnergyApp());
 }
 class EnergyApp extends StatefulWidget {
@@ -84,7 +84,7 @@ class _TasksState extends State<Tasks> {
  String employee=staff.first['id'];final title=TextEditingController(),description=TextEditingController();
  final ok=await showDialog<bool>(context:context,builder:(c)=>StatefulBuilder(builder:(c,update)=>AlertDialog(
  title:const Text('مهمة جديدة'),content:Column(mainAxisSize:MainAxisSize.min,children:[
- DropdownButtonFormField<String>(value:employee,items:staff.map((p)=>DropdownMenuItem<String>(value:p['id'],child:Text(p['full_name'].toString()))).toList(),onChanged:(v)=>update(()=>employee=v??employee)),
+ DropdownButtonFormField<String>(initialValue:employee,items:staff.map((p)=>DropdownMenuItem<String>(value:p['id'],child:Text(p['full_name'].toString()))).toList(),onChanged:(v)=>update(()=>employee=v??employee)),
  TextField(controller:title,decoration:const InputDecoration(labelText:'عنوان المهمة')),
  TextField(controller:description,decoration:const InputDecoration(labelText:'التفاصيل'))]),
  actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('إلغاء')),FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('نشر'))])));
