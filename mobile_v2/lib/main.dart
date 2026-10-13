@@ -50,6 +50,7 @@ class Dashboard extends StatelessWidget {
  const Text('ENERGY PLUS',style:TextStyle(fontSize:30,color:Colors.amber)),
  Card(child:ListTile(title:const Text('المهام اليومية'),leading:const Icon(Icons.task_alt),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>Tasks(profile:p,manager:manager))))),
  if(manager)Card(child:ListTile(title:const Text('إدارة الموظفين'),leading:const Icon(Icons.people),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const StaffList())))),
+ if(manager)Card(child:ListTile(title:const Text('إشعارات إنجاز المهام'),leading:const Icon(Icons.notifications_active),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const ManagerNotifications())))),
  if(manager||dept.contains('sales')||dept.contains('سيلز'))const Card(child:ListTile(title:Text('السيلز'),subtitle:Text('العملاء، التارجت، المكالمات، العمولات — قيد الربط الآمن'))),
  if(manager||dept.contains('coach')||dept.contains('trainer')||dept.contains('مدرب'))const Card(child:ListTile(title:Text('المدربين'),subtitle:Text('الجلسات وتأكيد العملاء والتقييمات — قيد الربط الآمن'))),
  const Card(child:ListTile(title:Text('الحضور والانصراف'),subtitle:Text('قيد الربط بواجهة آمنة — لا يستخدم API الموقع القديم'))),
@@ -112,4 +113,35 @@ class StaffList extends StatelessWidget {
  if(!s.hasData)return const Center(child:CircularProgressIndicator());
  return ListView(children:s.data!.map((p)=>ListTile(title:Text(p['full_name'].toString()),subtitle:Text((p['department']??'').toString()+' / '+(p['branch']??'').toString()))).toList());
  })));
+}
+
+class ManagerNotifications extends StatefulWidget {
+ const ManagerNotifications({super.key});
+ @override State<ManagerNotifications> createState()=>_ManagerNotificationsState();
+}
+class _ManagerNotificationsState extends State<ManagerNotifications> {
+ late Future<List<Map<String,dynamic>>> events;
+ @override void initState(){super.initState();reload();}
+ void reload(){events=fetch();setState((){});}
+ Future<List<Map<String,dynamic>>> fetch()async{
+  final uid=api.auth.currentUser!.id;
+  return List<Map<String,dynamic>>.from(await api.from('notifications')
+    .select('id,title,message,type,created_at,is_read')
+    .eq('user_id',uid).eq('type','task_completed')
+    .order('created_at',ascending:false).limit(100));
+ }
+ @override Widget build(BuildContext context)=>Directionality(textDirection:TextDirection.rtl,child:Scaffold(
+  appBar:AppBar(title:const Text('إنجازات الموظفين'),actions:[IconButton(onPressed:reload,icon:const Icon(Icons.refresh))]),
+  body:FutureBuilder(future:events,builder:(context,s){
+   if(s.hasError)return Center(child:Text('تعذر تحميل الإشعارات: '+s.error.toString()));
+   if(!s.hasData)return const Center(child:CircularProgressIndicator());
+   return RefreshIndicator(onRefresh:()async{reload();await events;},child:ListView(
+    children:s.data!.isEmpty?[const ListTile(title:Text('لا توجد إشعارات إنجاز حتى الآن'))]:
+      s.data!.map((n)=>Card(child:ListTile(
+       leading:const Icon(Icons.check_circle,color:Colors.green),
+       title:Text(n['title'].toString()),
+       subtitle:Text(n['message'].toString()+'\n'+n['created_at'].toString())
+      ))).toList()));
+  })
+ ));
 }
