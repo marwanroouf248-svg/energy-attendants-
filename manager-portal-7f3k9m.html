@@ -272,7 +272,7 @@ async function api(action,body={},retry=true){
   }
 }
 async function approvalApi(action,body={},retry=true){
-  const managerActions=new Set(['manager_requests','manager_decide','manager_action','manager_manual_attendance','manager_delete_attendance','manager_break_action']);
+  const managerActions=new Set(['manager_requests','manager_action','manager_manual_attendance','manager_delete_attendance','manager_break_action']); // Decisions and device resets use attendance-approval V2 to enforce safe shift pairing
   const endpoint=managerActions.has(action)?MANAGER_API:APPROVAL_F;
   try{
     return await fetchJson(endpoint,{method:'POST',headers:{'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},body:JSON.stringify({action,...body})});
