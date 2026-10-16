@@ -1,0 +1,13 @@
+name: energy_plus_staff
+description: Energy Plus employee and manager mobile application (V2 prototype).
+publish_to: none
+version: 0.1.0+1
+environment:
+  sdk: '>=3.4.0 <4.0.0'
+dependencies:
+  flutter:
+    sdk: flutter
+  supabase_flutter: ^2.8.0
+  intl: ^0.20.2
+flutter:
+  uses-material-design: true

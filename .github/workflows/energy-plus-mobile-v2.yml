@@ -1,0 +1,43 @@
+name: Energy Plus V2 Android validation
+on:
+  push:
+    branches: [energy-plus-mobile-v2]
+    paths:
+      - 'mobile_v2/**'
+      - '.github/workflows/energy-plus-mobile-v2.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'mobile_v2/**'
+      - '.github/workflows/energy-plus-mobile-v2.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  analyze-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Generate Android scaffolding
+        working-directory: mobile_v2
+        run: flutter create --platforms=android .
+      - name: Resolve dependencies
+        working-directory: mobile_v2
+        run: flutter pub get
+      - name: Analyze Dart code
+        working-directory: mobile_v2
+        run: flutter analyze lib/main.dart
+      - name: Build unsigned development APK
+        working-directory: mobile_v2
+        run: flutter build apk --debug --dart-define=SUPABASE_URL=https://kfrshaagrcggcjalsjdu.supabase.co --dart-define=SUPABASE_PUBLISHABLE_KEY=sb_publishable_mKftrB-itebmeA-bdtt6dw_Q3QnxH0_
+      - name: Upload development APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: energy-plus-v2-debug-apk
+          path: mobile_v2/build/app/outputs/flutter-apk/app-debug.apk
+          if-no-files-found: error
+          retention-days: 7
