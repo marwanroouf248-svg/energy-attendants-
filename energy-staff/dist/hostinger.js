@@ -34,3 +34,28 @@ setInterval(async()=>{if(!nodeUser)return;try{const s=await nodeApi('session');i
 render();checkHostingerServer();
 
 $('#closeModal').onclick=()=>$('#modal').close();
+
+function changeAccountPassword(){
+ if(!nodeUser)return;
+ safeSubmit('تغيير كلمة المرور',
+  passwordInput('currentPassword','كلمة المرور الحالية')+
+  passwordInput('password','كلمة المرور الجديدة','new-password')+
+  passwordInput('passwordConfirm','تأكيد كلمة المرور الجديدة','new-password')+
+  '<p>بعد الحفظ، سيتم تسجيل الخروج من الأجهزة الأخرى. سيظل حسابك مفتوحًا على هذا الجهاز.</p>',
+  async f=>{
+   validatePassword(String(f.get('password')),String(f.get('passwordConfirm')));
+   await nodeApi('password',{method:'POST',body:{currentPassword:f.get('currentPassword'),password:f.get('password')}});
+   toast('تم تغيير كلمة المرور وإغلاق الجلسات القديمة.');
+  });
+ attachPasswordReveals();
+}
+const renderBeforeAccountSettings=render;
+render=function(){
+ renderBeforeAccountSettings();
+ if(!nodeUser||!previewSession)return;
+ const actions=$('.header-actions');
+ if(actions&&!$('#changeAccountPassword')){
+  actions.insertAdjacentHTML('afterbegin','<button type="button" id="changeAccountPassword">تغيير كلمة المرور</button>');
+  $('#changeAccountPassword').onclick=changeAccountPassword;
+ }
+};
