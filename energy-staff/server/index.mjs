@@ -6,7 +6,7 @@ import {createStore} from './store.mjs';
 import {hashPassword,checkPassword,passwordValid,randomToken,digest,safeEqual,cookieSession,sessionCookie,requireCsrf} from './security.mjs';
 import {positions,text,email,phone,safeUser,emptyWorkspace,hydrateWorkspace,visibleWorkspace,employeeAction} from './domain.mjs';
 const env=process.env,production=env.NODE_ENV==='production',origin=env.PUBLIC_ORIGIN||(production?'':'http://localhost:3000'),root=path.resolve(fileURLToPath(new URL('../dist/',import.meta.url)));
-let store,dbError=false;const databaseReady=createStore().then(s=>store=s).catch(()=>{dbError=true;console.error('Energy Staff: database configuration or connection unavailable. Check Hostinger environment settings.');});
+let store,dbError=false;const databaseReady=createStore().then(s=>store=s).catch(()=>{dbError=true;console.error('Energy Staff: database configuration or connection unavailable. Check database environment settings.');});
 const dummyHash=await hashPassword('Not-A-User-'+randomToken());
 const errorMessages={PASSWORD_RULES:'كلمة المرور من ١٠ إلى ١٢٨ حرف، مع حروف وأرقام.',INVALID_INPUT:'راجع البيانات المطلوبة.',INVALID_EMAIL:'البريد الإلكتروني غير صحيح.',INVALID_PHONE:'رقم الهاتف غير صحيح.',CSRF:'حدّث الصفحة وحاول مرة أخرى.',ORIGIN:'مصدر الطلب غير مسموح.',LOGIN_FAILED:'البريد أو كلمة المرور غير صحيحين.',PENDING:'طلبك بانتظار موافقة الإدارة الأولى.',ACCOUNT_DISABLED:'الحساب غير متاح؛ راجع الإدارة.',FORBIDDEN:'الإجراء غير مسموح لحسابك.',AUTH_REQUIRED:'سجل دخولك أولًا.',RATE_LIMITED:'محاولات كثيرة؛ حاول مرة أخرى لاحقًا.',SETUP_REQUIRED:'إعداد الإدارة غير مكتمل.',INVALID_SETUP_TOKEN:'رمز إعداد الإدارة غير صحيح.',ALREADY_SETUP:'حساب الإدارة تم إعداده بالفعل.',CONFLICT:'في تحديثات أحدث من جهاز آخر. حدّث البيانات قبل الحفظ.',BRANCH_LOCATION_MISSING:'موقع الفرع لم يتم ضبطه بعد.',LOW_GPS_ACCURACY:'دقة الموقع غير كافية؛ فعّل الموقع الدقيق وأعد المحاولة.',OUTSIDE_80_METERS:'لا يمكن التسجيل خارج نطاق ٨٠ متر من الفرع.',ALREADY_CHECKED_IN:'تم تسجيل حضور بالفعل.',NO_OPEN_SHIFT:'لا يوجد حضور مفتوح.',BREAK_OPEN:'أنهِ البريك قبل تسجيل الانصراف.',BREAK_LIMIT:'وصلت لحد البريكات المسموح.',NO_OPEN_BREAK:'لا يوجد بريك مفتوح.',INVALID_STATE:'راجع ترتيب الحركة الحالية.',INVALID_DATE:'التاريخ غير صحيح.',DUPLICATE_PHONE:'رقم العميل مسجل بالفعل؛ راجع الإدارة.',DATABASE_NOT_CONFIGURED:'السيرفر يحتاج إعداد قاعدة البيانات في Hostinger.',NOT_FOUND:'غير موجود.'};
 function fail(code,status=400){throw Object.assign(Error(code),{status})}
@@ -26,7 +26,7 @@ export const server=http.createServer(async(req,res)=>{
  try{const url=new URL(req.url,'http://localhost');
  if(url.pathname.startsWith('/api/')){
   await databaseReady;
-  if(url.pathname==='/api/health')return json(res,200,{ready:!!store&&!dbError,storage:'mysql',hosting:'node',publicOriginConfigured:!!origin});
+  if(url.pathname==='/api/health')return json(res,200,{ready:!!store&&!dbError,storage:store?.kind||'mysql',hosting:'node',publicOriginConfigured:!!origin});
   if(!store||!origin)fail('DATABASE_NOT_CONFIGURED',503);
   const s=await session(req);
   if(req.method==='GET'&&url.pathname==='/api/session'){const csrf=s?.csrf||await issueSession(res);const admins=await store.q('SELECT id FROM es_users WHERE role=\'admin\' LIMIT 1');return json(res,200,{csrf,user:s?.user?safeUser(s.user):null,needsSetup:admins.length===0})}
