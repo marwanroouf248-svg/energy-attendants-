@@ -1,6 +1,17 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {hashPassword,checkPassword,passwordValid,requireCsrf,sessionCookie,digest} from '../server/security.mjs';
 import {emptyWorkspace,employeeAction,visibleWorkspace,hydrateWorkspace,verifyLocation} from '../server/domain.mjs';
+test('assessment doctor gets own attendance without trainer or sales privileges',()=>{
+ const doctor={id:20,full_name:'Assessment Doctor',position:'أسسمنت — دكتور علاج طبيعي',branch:'A',role:'employee',status:'approved'};
+ const db=hydrateWorkspace({branches:[{name:'A',lat:30,lng:31}]},[doctor]);
+ assert.equal(db.staff[0].department,'الأسسمنت والعلاج الطبيعي');
+ const now=Date.parse('2026-10-17T08:00:00Z'),coords={latitude:30,longitude:31,accuracy:5};
+ employeeAction(db,doctor,'punch_in',{coords},now);employeeAction(db,doctor,'punch_out',{coords},now+3600000);
+ assert.equal(db.punches.length,1);assert.equal(Date.parse(db.punches[0].out)-Date.parse(db.punches[0].in),3600000);
+ assert.throws(()=>employeeAction(db,doctor,'coach_create',{clientName:'Private',phone:'01000000000',workout:'Test'}));
+ assert.throws(()=>employeeAction(db,doctor,'sales_create',{name:'Private',phone:'01000000000',source:'other'}));
+ db.staff.push({id:21,name:'Other',branch:'A'});assert.deepEqual(visibleWorkspace(db,doctor).staff.map(s=>s.id),[20]);
+});
 test('HR and quality managers can manage only their department and branch',()=>{
  const people=[{id:10,name:'HR One',department:'الموارد البشرية',branch:'A'},{id:11,name:'Quality One',department:'الجودة',branch:'A'},{id:12,name:'HR Other Branch',department:'الموارد البشرية',branch:'B'}];
  const db=emptyWorkspace();db.staff=people;

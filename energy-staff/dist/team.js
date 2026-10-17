@@ -1,7 +1,7 @@
 // Workflow preview only. Approval, identity, and department checks must be enforced server-side before staff rollout.
 db.joinRequests??=[];db.dailyAssignments??=[];db.coachSessions??=[];db.salesLeads??=[];
 const teamRender=render;navs.push(['join','＋','تسجيل موظف جديد'],['join-approvals','✓','طلبات الانضمام'],['daily-team','☑','مهام الموظفين'],['coach-log','♙','سجل المدربين'],['sales-work','▤','متابعة السيلز']);
-const departments=['التدريب','السيلز','الهاوس كيبنج','الجودة','الموارد البشرية'];const positions={'كابتن':'التدريب','سيلز':'السيلز','هاوس كيبنج':'الهاوس كيبنج','كواليتي':'الجودة','HR':'الموارد البشرية'};let managerDepartment='التدريب',taskDay=cairoDay(),coachDay=cairoDay(),salesStage='all',salesSource='all',salesQuery='';
+const departments=['التدريب','السيلز','الهاوس كيبنج','الجودة','الموارد البشرية','الأسسمنت والعلاج الطبيعي'];const positions={'كابتن':'التدريب','سيلز':'السيلز','هاوس كيبنج':'الهاوس كيبنج','كواليتي':'الجودة','HR':'الموارد البشرية','أسسمنت — دكتور علاج طبيعي':'الأسسمنت والعلاج الطبيعي'};let managerDepartment='التدريب',taskDay=cairoDay(),coachDay=cairoDay(),salesStage='all',salesSource='all',salesQuery='';
 const taskTemplates=['ترتيب الفلور والمعدات بعد الاستخدام','التأكد من نظافة المكان','التأكد من تشغيل التكييفات والإبلاغ عن الأعطال'];
 const leadSources=['old data','expired','invitation','social media','rank','other'];const leadStages=['Source','Open','Follow','Close'];const callOutcomes=['رد','لم يرد','مشغول','مهتم','غير مهتم','اشترك'];
 function employeeDepartment(s){return s.department||positions[s.position]||(/مدرب|مدربة|كابتن/.test(s.job)?'التدريب':/استقبال|سيلز|مبيعات|عملاء/.test(s.job)?'السيلز':'الهاوس كيبنج')}
