@@ -18,6 +18,6 @@ export async function createPostgresStore(env=process.env){
    return /^(SELECT|WITH)\b/.test(sql)?result.rows:{affectedRows:result.rowCount,insertId:result.rows[0]?.id};
   }catch(e){if(e.code==='23505')e.code='ER_DUP_ENTRY';throw e}
  }
- await pool.query('SELECT state_key FROM energy_staff_v3.es_state LIMIT 1');
+ try{await pool.query('SELECT state_key FROM energy_staff_v3.es_state LIMIT 1')}catch(e){await pool.end();throw e}
  return {kind:'postgres',q:(sql,args)=>query(pool,sql,args),async transaction(fn){const conn=await pool.connect();try{await conn.query('BEGIN');const result=await fn({q:(sql,args)=>query(conn,sql,args)});await conn.query('COMMIT');return result}catch(e){await conn.query('ROLLBACK');throw e}finally{conn.release()}},close:()=>pool.end()};
 }

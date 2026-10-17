@@ -32,6 +32,7 @@ render=function(){if(nodeUser){role=nodeUser.role==='admin'?'الإدارة':nod
 async function checkHostingerServer(){try{const response=await fetch('/api/health',{credentials:'same-origin',cache:'no-store'}),health=await response.json();nodeReady=!!health.ready;if(nodeReady){const s=await nodeApi('session');nodeCsrf=s.csrf;nodeNeedsSetup=s.needsSetup;const registration=await nodeApi('registration-options');db.branches=registration.branches.map(name=>({name,lat:null,lng:null}));if(s.user?.status==='approved'){nodeUser=s.user;await enterServerWorkspace();return}}}catch{nodeReady=false}finally{nodeChecked=true}if(!previewSession)entryView()}
 setInterval(async()=>{if(!nodeUser)return;try{const s=await nodeApi('session');if(!s.user||s.user.status!=='approved'){nodeUser=null;previewSession=null;entryMessage='الجلسة انتهت أو الحساب موقوف. سجل دخولك من جديد.';entryView()}}catch{}},60000);
 render();checkHostingerServer();
+setInterval(()=>{if(!nodeReady&&!previewSession)checkHostingerServer()},15000);
 
 $('#closeModal').onclick=()=>$('#modal').close();
 

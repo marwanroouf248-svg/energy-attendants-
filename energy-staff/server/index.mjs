@@ -3,12 +3,13 @@ import {readFile,stat} from 'node:fs/promises';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createStore} from './store.mjs';
+import {createConnection} from './connection.mjs';
 import {hashPassword,checkPassword,passwordValid,randomToken,digest,safeEqual,cookieSession,sessionCookie,requireCsrf,clientAddress} from './security.mjs';
 import {positions,text,email,phone,safeUser,emptyWorkspace,hydrateWorkspace,visibleWorkspace,employeeAction} from './domain.mjs';
 const env=process.env,production=env.NODE_ENV==='production',origin=env.PUBLIC_ORIGIN||(production?'':'http://localhost:3000'),root=path.resolve(fileURLToPath(new URL('../dist/',import.meta.url)));
-let store,dbError=false;const databaseReady=createStore().then(s=>store=s).catch(()=>{dbError=true;console.error('Energy Staff: database configuration or connection unavailable. Check database environment settings.');});
+let store;const database=createConnection(createStore,{onError:e=>console.error('Energy Staff: database connection unavailable:',e.code||'DATABASE_UNAVAILABLE')});
 const dummyHash=await hashPassword('Not-A-User-'+randomToken());
-const errorMessages={PASSWORD_RULES:'كلمة المرور من ١٠ إلى ١٢٨ حرف، مع حروف وأرقام.',INVALID_INPUT:'راجع البيانات المطلوبة.',INVALID_EMAIL:'البريد الإلكتروني غير صحيح.',INVALID_PHONE:'رقم الهاتف غير صحيح.',CSRF:'حدّث الصفحة وحاول مرة أخرى.',ORIGIN:'مصدر الطلب غير مسموح.',LOGIN_FAILED:'البريد أو كلمة المرور غير صحيحين.',PENDING:'طلبك بانتظار موافقة الإدارة الأولى.',ACCOUNT_DISABLED:'الحساب غير متاح؛ راجع الإدارة.',FORBIDDEN:'الإجراء غير مسموح لحسابك.',AUTH_REQUIRED:'سجل دخولك أولًا.',RATE_LIMITED:'محاولات كثيرة؛ حاول مرة أخرى لاحقًا.',SETUP_REQUIRED:'إعداد الإدارة غير مكتمل.',INVALID_SETUP_TOKEN:'رمز إعداد الإدارة غير صحيح.',ALREADY_SETUP:'حساب الإدارة تم إعداده بالفعل.',CONFLICT:'في تحديثات أحدث من جهاز آخر. حدّث البيانات قبل الحفظ.',BRANCH_LOCATION_MISSING:'موقع الفرع لم يتم ضبطه بعد.',LOW_GPS_ACCURACY:'دقة الموقع غير كافية؛ فعّل الموقع الدقيق وأعد المحاولة.',OUTSIDE_80_METERS:'لا يمكن التسجيل خارج نطاق ٨٠ متر من الفرع.',ALREADY_CHECKED_IN:'تم تسجيل حضور بالفعل.',NO_OPEN_SHIFT:'لا يوجد حضور مفتوح.',BREAK_OPEN:'أنهِ البريك قبل تسجيل الانصراف.',BREAK_LIMIT:'وصلت لحد البريكات المسموح.',NO_OPEN_BREAK:'لا يوجد بريك مفتوح.',INVALID_STATE:'راجع ترتيب الحركة الحالية.',INVALID_DATE:'التاريخ غير صحيح.',DUPLICATE_PHONE:'رقم العميل مسجل بالفعل؛ راجع الإدارة.',DATABASE_NOT_CONFIGURED:'السيرفر يحتاج إعداد قاعدة البيانات في Hostinger.',NOT_FOUND:'غير موجود.'};
+const errorMessages={PASSWORD_RULES:'كلمة المرور من ١٠ إلى ١٢٨ حرف، مع حروف وأرقام.',INVALID_INPUT:'راجع البيانات المطلوبة.',INVALID_EMAIL:'البريد الإلكتروني غير صحيح.',INVALID_PHONE:'رقم الهاتف غير صحيح.',CSRF:'حدّث الصفحة وحاول مرة أخرى.',ORIGIN:'مصدر الطلب غير مسموح.',LOGIN_FAILED:'البريد أو كلمة المرور غير صحيحين.',PENDING:'طلبك بانتظار موافقة الإدارة الأولى.',ACCOUNT_DISABLED:'الحساب غير متاح؛ راجع الإدارة.',FORBIDDEN:'الإجراء غير مسموح لحسابك.',AUTH_REQUIRED:'سجل دخولك أولًا.',RATE_LIMITED:'محاولات كثيرة؛ حاول مرة أخرى لاحقًا.',SETUP_REQUIRED:'إعداد الإدارة غير مكتمل.',INVALID_SETUP_TOKEN:'رمز إعداد الإدارة غير صحيح.',ALREADY_SETUP:'حساب الإدارة تم إعداده بالفعل.',CONFLICT:'في تحديثات أحدث من جهاز آخر. حدّث البيانات قبل الحفظ.',BRANCH_LOCATION_MISSING:'موقع الفرع لم يتم ضبطه بعد.',LOW_GPS_ACCURACY:'دقة الموقع غير كافية؛ فعّل الموقع الدقيق وأعد المحاولة.',OUTSIDE_80_METERS:'لا يمكن التسجيل خارج نطاق ٨٠ متر من الفرع.',ALREADY_CHECKED_IN:'تم تسجيل حضور بالفعل.',NO_OPEN_SHIFT:'لا يوجد حضور مفتوح.',BREAK_OPEN:'أنهِ البريك قبل تسجيل الانصراف.',BREAK_LIMIT:'وصلت لحد البريكات المسموح.',NO_OPEN_BREAK:'لا يوجد بريك مفتوح.',INVALID_STATE:'راجع ترتيب الحركة الحالية.',INVALID_DATE:'التاريخ غير صحيح.',DUPLICATE_PHONE:'رقم العميل مسجل بالفعل؛ راجع الإدارة.',DATABASE_NOT_CONFIGURED:'تعذر الاتصال بقاعدة البيانات. حاول مرة أخرى بعد لحظات.',NOT_FOUND:'غير موجود.'};
 function fail(code,status=400){throw Object.assign(Error(code),{status})}
 function json(res,status,data){res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify(data))}
 async function body(req){let size=0,chunks=[];for await(const b of req){size+=b.length;if(size>2*1024*1024)fail('INVALID_INPUT',413);chunks.push(b)}try{const data=JSON.parse(Buffer.concat(chunks).toString('utf8')||'{}');if(!data||typeof data!=='object'||Array.isArray(data))fail('INVALID_INPUT');return data}catch{fail('INVALID_INPUT')}}
@@ -25,8 +26,8 @@ export const server=http.createServer(async(req,res)=>{
  res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Referrer-Policy','same-origin');res.setHeader('X-Frame-Options','DENY');res.setHeader('Permissions-Policy','geolocation=(self), camera=(), microphone=()');res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'");if(production)res.setHeader('Strict-Transport-Security','max-age=31536000');
  try{const url=new URL(req.url,'http://localhost');
  if(url.pathname.startsWith('/api/')){
-  await databaseReady;
-  if(url.pathname==='/api/health')return json(res,200,{ready:!!store&&!dbError,storage:store?.kind||'mysql',hosting:'node',publicOriginConfigured:!!origin});
+  store??=await database.ready();
+  if(url.pathname==='/api/health')return json(res,200,{ready:!!store,storage:store?.kind||'mysql',hosting:'node',publicOriginConfigured:!!origin});
   if(!store||!origin)fail('DATABASE_NOT_CONFIGURED',503);
   if(req.method==='GET'&&url.pathname==='/api/registration-options'){const w=await workspace();return json(res,200,{positions:Object.keys(positions),branches:w.db.branches.map(b=>b.name)})}
   const s=await session(req);
@@ -62,4 +63,4 @@ export const server=http.createServer(async(req,res)=>{
 });
 if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url)){server.listen(Number(env.PORT||3000),'0.0.0.0',()=>console.log('Energy Staff server listening'));for(const signal of ['SIGINT','SIGTERM'])process.on(signal,()=>server.close(async()=>{await store?.close();process.exit(0)}))}
 
-export async function injectTestStore(next){if(env.NODE_ENV!=='test')throw Error('TEST_ONLY');await databaseReady;store=next;dbError=false}
+export async function injectTestStore(next){if(env.NODE_ENV!=='test')throw Error('TEST_ONLY');store=next}
