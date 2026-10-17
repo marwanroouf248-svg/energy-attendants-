@@ -1,0 +1,20 @@
+name: Verify Energy Staff
+on:
+  push:
+    branches: [energy-staff-hostinger]
+  pull_request:
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: energy-staff
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - run: node check-entry.cjs && node check-team.cjs && node check-payroll.cjs && node check-operations.cjs && node check-geo.cjs && node check-hostinger.cjs

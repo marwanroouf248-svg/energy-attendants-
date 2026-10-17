@@ -1,0 +1,1 @@
+{"name":"energy-plus-staff","version":"1.0.0","private":true,"type":"module","engines":{"node":">=22"},"scripts":{"start":"node server/index.mjs","build":"node --check server/index.mjs","test":"node --test tests/*.test.mjs"},"dependencies":{"mysql2":"3.24.6"}}
