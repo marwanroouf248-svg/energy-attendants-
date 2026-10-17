@@ -1,0 +1,25 @@
+(()=>{
+const previous=render;
+const safe=v=>esc(String(v??''));
+function pageView(){
+if(!nodeUser||!['admin','manager'].includes(nodeUser.role))return;
+const nav=document.querySelector('#nav');
+if(nav&&!nav.querySelector('[data-shiftplanner]')){const button=document.createElement('button');button.dataset.shiftplanner='1';button.textContent='◷ جدول شفتات الموظفين';button.onclick=()=>{page='shift-planner';render()};nav.append(button)}
+if(page!=='shift-planner')return;
+const staff=(db.staff||[]).filter(s=>nodeUser.role==='admin'||(s.branch===nodeUser.branch&&s.department===positions[nodeUser.position]));
+const shifts=(db.shiftAssignments||[]).filter(x=>staff.some(s=>Number(s.id)===Number(x.employeeId))).slice().sort((a,b)=>(a.day+a.start).localeCompare(b.day+b.start));
+const punches=db.punches||[];
+const rows=shifts.map(x=>{const dayPunch=punches.filter(p=>Number(p.employeeId)===Number(x.employeeId)&&cairoDay(p.in)===x.day).sort((a,b)=>Date.parse(a.in)-Date.parse(b.in))[0];let state='لم يتم تسجيل حضور',late='—';if(dayPunch){const t=new Intl.DateTimeFormat('en-GB',{timeZone:'Africa/Cairo',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date(dayPunch.in));const expected=Number(x.start.slice(0,2))*60+Number(x.start.slice(3)),actual=Number(t.slice(0,2))*60+Number(t.slice(3));const minutes=Math.max(0,actual-expected-(x.graceMinutes||0));late=String(minutes)+' دقيقة';state=minutes?'متأخر':'في الموعد'}return {x,state,late}});
+const app=document.querySelector('#app');if(!app)return;
+app.innerHTML='<section class="shiftplanner" dir="rtl"><p>ENERGY PLUS · SHIFTS</p><h2>جدول شفتات الموظفين</h2><p>كل وردية مرتبطة بموظف وفرع وتاريخ. البريك مدفوع ولا يؤثر على أجر الساعات.</p><div class="shiftplanner-tools"><button id="shiftplanner-add">＋ تعيين شفت</button><button id="shiftplanner-csv">↓ تصدير تقرير CSV لفتحه في Excel</button></div><div class="shiftplanner-scroll"><table><thead><tr><th>الموظف</th><th>الفرع</th><th>التاريخ</th><th>الوقت</th><th>الحضور</th><th>التأخير المسجل</th><th>إجراء</th></tr></thead><tbody>'+rows.map(({x,state,late})=>'<tr><td>'+safe(x.employeeName)+'</td><td>'+safe(x.branch)+'</td><td>'+safe(x.day)+'</td><td>'+safe(x.start)+' — '+safe(x.end)+'</td><td>'+safe(state)+'</td><td>'+safe(late)+'</td><td><button data-shift-delete="'+safe(x.id)+'">حذف</button></td></tr>').join('')+'</tbody></table></div><p>حالة التأخير محسوبة من حضور مسجل؛ الغياب والتنبيهات التلقائية تحتاج سياسة وتوقيت تحقق منفصلين.</p></section>';
+document.querySelector('#shiftplanner-add').onclick=()=>{
+if(!staff.length)return toast('لا يوجد موظفون متاحون في نطاق إدارتك');
+openForm('تعيين شفت للموظف','<label>الموظف<select name="employeeId">'+staff.map(s=>'<option value="'+safe(s.id)+'">'+safe(s.name)+' — '+safe(s.branch)+'</option>').join('')+'</select></label><label>اليوم<input type="date" name="day" required></label><label>البداية<input type="time" name="start" required></label><label>النهاية<input type="time" name="end" required></label><p>يمكن اختيار وقت نهاية أقل من البداية للورديات الليلية.</p>',()=>{});
+document.querySelector('#form').onsubmit=async e=>{e.preventDefault();try{await nativeAction('shift_assign',Object.fromEntries(new FormData(e.target)));document.querySelector('#modal').close();toast('تم حفظ الشفت على السيرفر')}catch(err){toast(err.message)}};
+};
+app.querySelectorAll('[data-shift-delete]').forEach(b=>b.onclick=async()=>{if(!confirm('حذف هذا الشفت؟'))return;try{await nativeAction('shift_remove',{id:b.dataset.shiftDelete})}catch(err){toast(err.message)}});
+document.querySelector('#shiftplanner-csv').onclick=()=>{const q=v=>'"'+String(v??'').replace(/^[=+\-@]/,' $&').replace(/"/g,'""')+'"';const lines=[['الموظف','الفرع','اليوم','بداية الشفت','نهاية الشفت','الحضور','التأخير'],...rows.map(({x,state,late})=>[x.employeeName,x.branch,x.day,x.start,x.end,state,late])].map(row=>row.map(q).join(',')).join('\r\n');const url=URL.createObjectURL(new Blob(['\ufeff'+lines],{type:'text/csv;charset=utf-8'})),a=document.createElement('a');a.href=url;a.download='energy-shifts.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),2000)};
+}
+render=function(){const target=page;if(target==='shift-planner')page='overview';previous();page=target;pageView()};
+const css=document.createElement('style');css.textContent='.shiftplanner{direction:rtl;background:#171813;color:#f5edda;border:1px solid #947341;border-radius:22px;padding:25px}.shiftplanner h2{color:#e7c77b;font-size:30px}.shiftplanner p{color:#c9bd9e}.shiftplanner-tools{display:flex;gap:12px;flex-wrap:wrap;margin:22px 0}.shiftplanner button{background:#d7b56d;color:#191a14;border-radius:30px;padding:10px 14px;border:0;cursor:pointer}.shiftplanner-scroll{overflow:auto}.shiftplanner table{min-width:730px;width:100%;border-collapse:collapse}.shiftplanner th,.shiftplanner td{text-align:right;border-bottom:1px solid #58503a;padding:12px}';document.head.append(css);
+})();
