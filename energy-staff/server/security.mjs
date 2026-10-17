@@ -1,5 +1,10 @@
 import {randomBytes,scrypt as derive,timingSafeEqual,createHash} from 'node:crypto';
 import {promisify} from 'node:util';
+import {isIP} from 'node:net';
+export function clientAddress(req,onVercel=false){
+ const forwarded=onVercel?String(req.headers['x-vercel-forwarded-for']||req.headers['x-forwarded-for']||'').slice(0,512).split(',')[0].trim():'';
+ return isIP(forwarded)?forwarded:String(req.socket?.remoteAddress||'unknown');
+}
 const scrypt=promisify(derive);
 export const digest=s=>createHash('sha256').update(String(s)).digest('hex');
 export const randomToken=()=>randomBytes(32).toString('hex');
