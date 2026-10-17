@@ -1,4 +1,4 @@
-export const positions={'كابتن':'التدريب','سيلز':'السيلز','هاوس كيبنج':'الهاوس كيبنج'};
+export const positions={'كابتن':'التدريب','سيلز':'السيلز','هاوس كيبنج':'الهاوس كيبنج','كواليتي':'الجودة','HR':'الموارد البشرية'};
 export function text(v,max=1000){if(typeof v!=='string'||!v.trim()||v.trim().length>max)throw Error('INVALID_INPUT');return v.trim()}
 export function email(v){const s=text(v,254).toLowerCase();if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s))throw Error('INVALID_EMAIL');return s}
 export function phone(v){const s=text(v,40).replace(/[٠-٩]/g,c=>c.charCodeAt(0)-1632).replace(/[\s()-]/g,'');if(!/^\+?\d{8,15}$/.test(s))throw Error('INVALID_PHONE');return s}

@@ -1,8 +1,10 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 process.env.NODE_ENV='test';process.env.PUBLIC_ORIGIN='http://localhost:3000';process.env.INITIAL_ADMIN_EMAIL='owner@example.test';process.env.ADMIN_SETUP_TOKEN='test-setup-token-'.repeat(3);
 const {server,injectTestStore}=await import('../server/index.mjs');
-const users=[],sessions=new Map(),limits=new Map(),states=new Map([['workspace',{payload:'{}',revision:0}],['bootstrap',{payload:'{}',revision:0}]]);
+const users=[],sessions=new Map(),limits=new Map(),states=new Map([['workspace',{payload:JSON.stringify({branches:[{name:'A',lat:null,lng:null}]}),revision:0}],['bootstrap',{payload:'{}',revision:0}]]);
 const fake={async q(sql,p=[]){
+ if(sql.startsWith('SELECT payload,revision FROM es_state'))return [states.get('workspace')];
+ if(sql.includes("FROM es_users WHERE status='approved'"))return users.filter(u=>u.status==='approved').map(u=>({...u}));
  if(sql.startsWith('SELECT * FROM es_sessions')){const s=sessions.get(p[0]);return s?[s]:[]}
  if(sql.startsWith('INSERT INTO es_sessions')){sessions.set(p[0],{token_hash:p[0],user_id:p[1],csrf:p[2]});return {affectedRows:1}}
  if(sql.startsWith('DELETE FROM es_sessions WHERE token_hash')){sessions.delete(p[0]);return {affectedRows:1}}
@@ -27,8 +29,11 @@ async function request(path,{method='GET',body,session,origin='http://localhost:
 test('HTTP password registration, approval, CSRF and logout flow',async()=>{try{
  const visitor=await request('/api/session');assert.equal(visitor.status,200);assert.equal(visitor.data.user,null);const v={cookie:visitor.cookie,csrf:visitor.data.csrf};
  const rejected=await request('/api/register',{method:'POST',session:{...v,csrf:'wrong'},body:{}});assert.equal(rejected.status,400);assert.equal(rejected.data.error,'CSRF');
+ const choices=await request('/api/registration-options');assert.equal(choices.status,200);assert(choices.data.positions.includes('كواليتي'));assert(choices.data.positions.includes('HR'));assert.deepEqual(choices.data.branches,['A']);assert(!JSON.stringify(choices.data).includes('password'));
  const payload={name:'Test Employee',email:'employee@example.test',phone:'01011111111',position:'كابتن',branch:'A',password:'Valid-Employee-2026'};
  const signup=await request('/api/register',{method:'POST',session:v,body:payload});assert.equal(signup.status,201);assert.equal(users[0].status,'pending');assert(!JSON.stringify(users).includes(payload.password));
+ for(const position of ['كواليتي','HR']){const added=await request('/api/register',{method:'POST',session:v,body:{...payload,email:position==='HR'?'hr@example.test':'quality@example.test',position,role:'admin'}});assert.equal(added.status,201);assert.equal(users.at(-1).role,'employee');assert.equal(users.at(-1).status,'pending')}
+ const badBranch=await request('/api/register',{method:'POST',session:v,body:{...payload,email:'bad@example.test',branch:'Unknown'}});assert.equal(badBranch.status,400);
  const wrong=await request('/api/login',{method:'POST',session:v,body:{email:payload.email,password:'Wrong-Password-2026'}});assert.equal(wrong.status,401);
  const pending=await request('/api/login',{method:'POST',session:v,body:{email:payload.email,password:payload.password}});assert.equal(pending.status,403);assert.equal(pending.data.error,'PENDING');
  const setup=await request('/api/bootstrap',{method:'POST',session:v,body:{name:'Owner',email:'owner@example.test',branch:'A',setupToken:process.env.ADMIN_SETUP_TOKEN,password:'Valid-Owner-2026'}});assert.equal(setup.status,201);

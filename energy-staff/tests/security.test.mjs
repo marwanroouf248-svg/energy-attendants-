@@ -1,6 +1,18 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {hashPassword,checkPassword,passwordValid,requireCsrf,sessionCookie,digest} from '../server/security.mjs';
 import {emptyWorkspace,employeeAction,visibleWorkspace,hydrateWorkspace,verifyLocation} from '../server/domain.mjs';
+test('HR and quality managers can manage only their department and branch',()=>{
+ const people=[{id:10,name:'HR One',department:'الموارد البشرية',branch:'A'},{id:11,name:'Quality One',department:'الجودة',branch:'A'},{id:12,name:'HR Other Branch',department:'الموارد البشرية',branch:'B'}];
+ const db=emptyWorkspace();db.staff=people;
+ const manager={id:10,full_name:'HR Manager',role:'manager',position:'HR',branch:'A'};
+ employeeAction(db,manager,'task_assign',{employeeId:10,day:'2026-10-17',title:'Review employee files'});
+ assert.throws(()=>employeeAction(db,manager,'task_assign',{employeeId:11,day:'2026-10-17',title:'Wrong department'}));
+ assert.throws(()=>employeeAction(db,manager,'task_assign',{employeeId:12,day:'2026-10-17',title:'Wrong branch'}));
+ assert.deepEqual(visibleWorkspace(db,manager).staff.map(s=>s.id),[10]);
+ const quality={id:11,full_name:'Quality',role:'employee',position:'كواليتي',branch:'A'};
+ assert.throws(()=>employeeAction(db,quality,'task_assign',{employeeId:11,day:'2026-10-17',title:'No manager rights'}));
+ assert.throws(()=>employeeAction(db,quality,'coach_create',{clientName:'Private',phone:'01000000000',workout:'Test'}));
+});
 test('password hashing uses unique salts and verifies without storing plaintext',async()=>{const password='Example-Password-2026';const a=await hashPassword(password),b=await hashPassword(password);assert.notEqual(a,b);assert(!a.includes(password));assert(await checkPassword(password,a));assert.equal(await checkPassword('Wrong-Password-2026',a),false);assert.equal(await checkPassword(password,'invalid'),false);assert.equal(passwordValid('1234567890'),false);assert.equal(passwordValid('short2'),false)});
 test('session cookies and CSRF protect mutations',()=>{const c=sessionCookie('abc');assert.match(c,/HttpOnly/);assert.match(c,/Secure/);assert.match(c,/SameSite=Lax/);assert.match(c,/Path=\//);assert.throws(()=>requireCsrf({headers:{'x-csrf-token':'wrong'}},{csrf:'right'},'https://gym.test'));assert.throws(()=>requireCsrf({headers:{'x-csrf-token':'right',origin:'https://other.test'}},{csrf:'right'},'https://gym.test'));assert.doesNotThrow(()=>requireCsrf({headers:{'x-csrf-token':'right',origin:'https://gym.test'}},{csrf:'right'},'https://gym.test'));assert.equal(digest('secret').length,64)});
 const coach={id:1,full_name:'Coach One',role:'employee',position:'كابتن',branch:'A'},sales={id:2,full_name:'Sales One',role:'employee',position:'سيلز',branch:'A'},manager={id:3,full_name:'Training Manager',role:'manager',position:'كابتن',branch:'A'};
