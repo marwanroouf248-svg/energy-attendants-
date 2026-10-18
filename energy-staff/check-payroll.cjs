@@ -13,3 +13,5 @@ assert.throws(()=>run("reopenPayroll(closedPayroll(1),' ')") );count++;run("reop
 run("page='payroll';render()");assert(nodes['#app'].innerHTML.includes('سعر الساعة'));count++;run("page='reports';render()");count++;
 run("db.payrollDrafts[payrollKey(2)]={...d,hourlyRate:'0'}");assert.throws(()=>run('closePayroll(2)'));count++;
 console.log('PASS:',count,'payroll checks: 3 formulas, target switch, paid breaks, Cairo boundary splits, exact cents, open/overlap blocking, frozen snapshots, reopen history and exports');
+for(const type of ['hr','quality','assessment']){assert.equal(run(`payrollCompute({...d,type:'${type}',hourlyRate:'50',privateTotal:'0',privateDraw:'0',employeeDraw:'0',bonus:'0',incentive:'0'},att).total`),500000)}
+console.log('PASS: HR, quality and assessment hourly payroll formulas');
