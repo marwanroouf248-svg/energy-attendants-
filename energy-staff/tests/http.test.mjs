@@ -1,9 +1,10 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 process.env.NODE_ENV='test';process.env.PUBLIC_ORIGIN='http://localhost:3000';process.env.INITIAL_ADMIN_EMAIL='owner@example.test';process.env.ADMIN_SETUP_TOKEN='test-setup-token-'.repeat(3);
 const {server,injectTestStore}=await import('../server/index.mjs');
-const users=[],sessions=new Map(),limits=new Map(),states=new Map([['workspace',{payload:JSON.stringify({branches:[{name:'A',lat:null,lng:null}]}),revision:0}],['bootstrap',{payload:'{}',revision:0}]]);
+const users=[],sessions=new Map(),limits=new Map(),states=new Map([['workspace',{payload:JSON.stringify({branches:[{name:'A',lat:null,lng:null}],staff:[{id:-1,name:'Legacy',email:'legacy@example.test',legacyProfileId:'legacy-test',needsActivation:true,branch:'A',position:'كابتن',department:'التدريب'}],dailyAssignments:[{id:'legacy-duty',employeeId:-1,title:'Legacy task',day:'2026-10-18',status:'assigned'}]}),revision:0}],['bootstrap',{payload:'{}',revision:0}]]);
 const fake={async q(sql,p=[]){
  if(sql.startsWith('SELECT payload,revision FROM es_state'))return [states.get('workspace')];
+ if(sql.startsWith('UPDATE es_state SET payload=')){const row=states.get('workspace');if(row.revision!==p[1])return {affectedRows:0};row.payload=p[0];row.revision++;return {affectedRows:1}}
  if(sql.includes("FROM es_users WHERE status='approved'"))return users.filter(u=>u.status==='approved').map(u=>({...u}));
  if(sql.startsWith('SELECT * FROM es_sessions')){const s=sessions.get(p[0]);return s?[s]:[]}
  if(sql.startsWith('INSERT INTO es_sessions')){sessions.set(p[0],{token_hash:p[0],user_id:p[1],csrf:p[2]});return {affectedRows:1}}
@@ -38,8 +39,9 @@ test('HTTP password registration, approval, CSRF and logout flow',async()=>{try{
  const pending=await request('/api/login',{method:'POST',session:v,body:{email:payload.email,password:payload.password}});assert.equal(pending.status,403);assert.equal(pending.data.error,'PENDING');
  const setup=await request('/api/bootstrap',{method:'POST',session:v,body:{name:'Owner',email:'owner@example.test',branch:'A',setupToken:process.env.ADMIN_SETUP_TOKEN,password:'Valid-Owner-2026'}});assert.equal(setup.status,201);
  const owner=await request('/api/login',{method:'POST',session:v,body:{email:'owner@example.test',password:'Valid-Owner-2026'}});assert.equal(owner.status,200);assert(!JSON.stringify(owner.data).includes('password_hash'));const o={cookie:owner.cookie,csrf:owner.data.csrf};assert.notEqual(o.cookie,v.cookie);assert.notEqual(o.csrf,v.csrf);
- const approve=await request('/api/members/1/review',{method:'POST',session:o,body:{status:'approved',position:'كابتن',role:'employee',branch:'A',reason:'Test approval'}});assert.equal(approve.status,200);
+ const approve=await request('/api/members/1/review',{method:'POST',session:o,body:{status:'approved',position:'كابتن',role:'employee',branch:'A',reason:'Test approval',legacyStaffId:-1}});assert.equal(approve.status,200);
  const fresh=await request('/api/session'),anonymous={cookie:fresh.cookie,csrf:fresh.data.csrf};const employee=await request('/api/login',{method:'POST',session:anonymous,body:{email:payload.email,password:payload.password}});assert.equal(employee.status,200);const e={cookie:employee.cookie,csrf:employee.data.csrf};
+ const linked=await request('/api/workspace',{session:e});assert.equal(linked.status,200);assert.equal(linked.data.db.dailyAssignments[0].employeeId,1);assert.equal(linked.data.db.staff[0].legacyProfileId,'legacy-test');assert.equal(linked.data.db.staff[0].needsActivation,false);
  const crossOrigin=await request('/api/logout',{method:'POST',session:e,origin:'https://other.test'});assert.equal(crossOrigin.status,400);assert.equal(crossOrigin.data.error,'ORIGIN');
  const forbidden=await request('/api/members',{session:e});assert.equal(forbidden.status,403);const escalated=await request('/api/members/1/review',{method:'POST',session:e,body:{status:'approved',role:'admin'}});assert.equal(escalated.status,403);
  const invalidChange=await request('/api/password',{method:'POST',session:e,body:{currentPassword:'Incorrect-2026',password:'New-Employee-2026'}});assert.equal(invalidChange.status,401);
