@@ -17,4 +17,4 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run build
-      - run: node check-entry.cjs && node check-team.cjs && node check-payroll.cjs && node check-operations.cjs && node check-geo.cjs && node check-hostinger.cjs
+      - run: node check-entry.cjs && node check-team.cjs && node check-payroll.cjs && node check-operations.cjs && node check-geo.cjs && node check-hostinger.cjs && node check-branch-assessment.cjs && node check-extras.cjs
