@@ -75,11 +75,14 @@ run("nodeUser={role:'employee',id:7,full_name:'كابتن تجريبي',position
 ok('employee cannot open documents panel',!String(nodes['#app'].innerHTML).includes('x-doc-new'));
 
 // Chat page
-run("nodeUser={role:'employee',id:7,full_name:'كابتن تجريبي',position:'كابتن',branch:'فرع فودافون'};db.chatMessages=[{id:'m1',employeeId:2,name:'مدير',branch:'فرع فودافون',department:'التدريب',body:'الاجتماع ١١',at:'2026-10-19T09:00:00.000Z',manager:true},{id:'m2',employeeId:9,name:'غريب',branch:'فرع الرخاوي',department:'السيلز',body:'لازم لا يظهر',at:'2026-10-19T09:00:00.000Z',manager:false}]");
+run("nodeUser={role:'employee',id:7,full_name:'كابتن تجريبي',position:'كابتن',branch:'فرع فودافون'};db.chatMessages=[{id:'m1',employeeId:2,name:'مدير',branch:'فرع فودافون',department:'التدريب',room:'branch',body:'الاجتماع ١١',at:'2026-10-19T09:00:00.000Z',manager:true},{id:'m2',employeeId:9,name:'غريب',branch:'فرع الرخاوي',department:'السيلز',room:'branch',body:'لازم لا يظهر',at:'2026-10-19T09:00:00.000Z',manager:false},{id:'m3',employeeId:2,name:'مدير',branch:null,department:'التدريب',room:'all',body:'إعلان عام للكل',at:'2026-10-19T09:30:00.000Z',manager:true}]");
 run("page='chat';render()");
 const chatHtml=String(nodes['#app'].innerHTML);
 ok('chat page renders with branch messages only',chatHtml.includes('الاجتماع ١١')&&!chatHtml.includes('لازم لا يظهر'));
+ok('chat has branch and all-staff tabs',chatHtml.includes('x-room-branch')&&chatHtml.includes('x-room-all'));
 ok('chat send box present',chatHtml.includes('x-chat-send'));
+run("document.querySelector('#x-room-all').onclick()");
+ok('all-staff room shows shared message',String(nodes['#app'].innerHTML).includes('إعلان عام للكل')&&!String(nodes['#app'].innerHTML).includes('الاجتماع ١١'));
 
 // Open shifts: manager create form + review buttons; employee claim button
 run("nodeUser={role:'manager',id:2,full_name:'مدير',position:'كابتن',branch:'فرع فودافون'};db.openShifts=[{id:'o1',branch:'فرع فودافون',department:'التدريب',day:'2026-10-22',start:'18:00',end:'23:00',graceMinutes:10,status:'open',claims:[{id:'c1',employeeId:7,name:'كابتن تجريبي',at:'2026-10-19T10:00:00.000Z',status:'pending'}],createdBy:2,createdByName:'مدير',createdAt:'2026-10-19T09:00:00.000Z'}];page='shift-swap';render()");
@@ -91,9 +94,12 @@ run("nodeUser={role:'employee',id:8,full_name:'زميل',position:'كابتن',b
 ok('employee sees claim button on open shift',String(nodes['#app'].innerHTML).includes('data-os-claim'));
 
 // Kiosk admin page for manager
-run("nodeUser={role:'manager',id:2,full_name:'مدير',position:'كابتن',branch:'فرع فودافون'};page='kiosk-admin';render()");
+run("nodeUser={role:'admin',id:5,full_name:'المالك',position:'كابتن',branch:'فرع فودافون'};db.rules.kioskEnabled=false;page='kiosk-admin';render()");
 const kioskHtml=String(nodes['#app'].innerHTML);
-ok('kiosk admin page renders with PIN controls',kioskHtml.includes('كشك البصمة')&&kioskHtml.includes('data-pin-set'));
+ok('kiosk admin page renders with PIN controls for admin',kioskHtml.includes('كشك البصمة')&&kioskHtml.includes('data-pin-set'));
+ok('kiosk is off by default with an enable toggle',kioskHtml.includes('مقفول')&&kioskHtml.includes('x-kiosk-toggle'));
+run("nodeUser={role:'manager',id:2,full_name:'مدير',position:'كابتن',branch:'فرع فودافون'};page='kiosk-admin';render()");
+ok('manager cannot open kiosk admin page',!String(nodes['#app'].innerHTML).includes('x-kiosk-toggle'));
 ok('kiosk page path documented',kioskHtml.includes('/kiosk.html'));
 
 // Kiosk public page files

@@ -2,7 +2,7 @@ import test from 'node:test';import assert from 'node:assert/strict';import {cre
 process.env.NODE_ENV='test';process.env.PUBLIC_ORIGIN='http://localhost:3000';process.env.INITIAL_ADMIN_EMAIL='owner@example.test';process.env.ADMIN_SETUP_TOKEN='test-setup-token-'.repeat(3);
 const {server,injectTestStore}=await import('../server/index.mjs');
 const digestPin=v=>createHash('sha256').update(String(v)).digest('hex');
-const users=[],sessions=new Map(),limits=new Map(),states=new Map([['workspace',{payload:JSON.stringify({branches:[{name:'A',lat:null,lng:null}],staff:[{id:-1,name:'Legacy',email:'legacy@example.test',branch:'A',position:'كابتن',department:'التدريب',pinHash:digestPin('246810')}]}),revision:0}]]);
+const users=[],sessions=new Map(),limits=new Map(),states=new Map([['workspace',{payload:JSON.stringify({branches:[{name:'A',lat:null,lng:null}],staff:[{id:-1,name:'Legacy',email:'legacy@example.test',branch:'A',position:'كابتن',department:'التدريب',pinHash:digestPin('246810')}],rules:{kioskEnabled:true}}),revision:0}]]);
 const fake={async q(sql,p=[]){
  if(sql.startsWith('SELECT payload,revision FROM es_state'))return [states.get('workspace')];
  if(sql.startsWith('UPDATE es_state SET payload=')){const row=states.get('workspace');if(row.revision!==p[1])return {affectedRows:0};row.payload=p[0];row.revision++;return {affectedRows:1}}
@@ -17,6 +17,9 @@ await new Promise(r=>server.listen(0,'127.0.0.1',r));const base='http://127.0.0.
 const post=body=>fetch(base+'/api/kiosk/punch',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(async r=>({status:r.status,data:await r.json()}));
 test('kiosk punch: PIN-only punch in/out at a branch, generic failure, no session',async()=>{
  try{
+  const saved2=states.get('workspace'),offState=JSON.parse(saved2.payload);offState.rules.kioskEnabled=false;saved2.payload=JSON.stringify(offState);
+  const offTry=await post({branch:'A',pin:'246810',direction:'in'});assert.equal(offTry.status,403);assert.equal(offTry.data.error,'KIOSK_OFF');
+  const onState=JSON.parse(saved2.payload);onState.rules.kioskEnabled=true;saved2.payload=JSON.stringify(onState);
   const badBranch=await post({branch:'Nowhere',pin:'246810',direction:'in'});assert.equal(badBranch.status,400);assert.equal(badBranch.data.error,'KIOSK_FAILED');
   const badPin=await post({branch:'A',pin:'000000',direction:'in'});assert.equal(badPin.data.error,'KIOSK_FAILED');
   const badShape=await post({branch:'A',pin:'12',direction:'in'});assert.equal(badShape.data.error,'KIOSK_FAILED');

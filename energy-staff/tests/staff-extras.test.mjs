@@ -321,3 +321,34 @@ test('kiosk PIN: manager sets and clears, uniqueness enforced, hash never leaks 
  employeeAction(db,mgr,'kiosk_pin_clear',{employeeId:1},t+2000);
  assert.equal(db.staff.find(s=>s.id===1).pinHash,undefined);
 });
+
+test('chat rooms: branch room and all-staff room, admin picks branch, per-room trim',()=>{
+ const {db,emp,emp2,mgr,otherBranch,admin}=seed();
+ employeeAction(db,emp,'chat_send',{body:'رسالة الفرع',room:'branch'},t);
+ employeeAction(db,mgr,'chat_send',{body:'رسالة عامة',room:'all'},t+1000);
+ // everyone sees the all-staff room; branch room only for own branch
+ assert.equal(visibleWorkspace(db,emp).chatMessages.length,2);
+ assert.equal(visibleWorkspace(db,otherBranch).chatMessages.length,1);
+ assert.equal(visibleWorkspace(db,otherBranch).chatMessages[0].body,'رسالة عامة');
+ // branch room posts land on own branch only
+ employeeAction(db,otherBranch,'chat_send',{body:'شات فرع B',room:'branch'},t+2000);
+ assert.equal(visibleWorkspace(db,otherBranch).chatMessages.length,2);
+ assert.equal(visibleWorkspace(db,emp).chatMessages.length,2);
+ // admin posts to a chosen branch room; invalid branch rejected
+ employeeAction(db,admin,'chat_send',{body:'إداري لفرع A',room:'branch',branch:'A'},t+3000);
+ assert.equal(visibleWorkspace(db,emp).chatMessages.length,3);
+ assert.throws(()=>employeeAction(db,admin,'chat_send',{body:'x',room:'branch',branch:'Nowhere'},t),/INVALID_INPUT/);
+ // room value other than 'all' stays a branch room
+ employeeAction(db,emp,'chat_send',{body:'default branch',room:'whatever'},t+4000);
+ assert.equal(db.chatMessages.at(-1).room,'branch');
+});
+
+test('kiosk toggle is admin-only and flips the flag',()=>{
+ const {db,mgr,admin}=seed();
+ assert.equal(db.rules.kioskEnabled,false);
+ assert.throws(()=>employeeAction(db,mgr,'kiosk_toggle',{enabled:true},t),/FORBIDDEN/);
+ employeeAction(db,admin,'kiosk_toggle',{enabled:true},t);
+ assert.equal(db.rules.kioskEnabled,true);
+ employeeAction(db,admin,'kiosk_toggle',{enabled:false},t+1000);
+ assert.equal(db.rules.kioskEnabled,false);
+});

@@ -32,7 +32,8 @@ function nav(){
  add('shift-swap','⇄ تبديل الشفتات');
  add('objections','✦ النقاط والاعتراضات');
  add('chat','💬 شات الفرع');
- if(canReview()){add('documents','📄 وثائق الفريق');add('kiosk-admin','🔑 كشك البصمة');}
+ if(canReview())add('documents','📄 وثائق الفريق');
+ if(nodeUser.role==='admin')add('kiosk-admin','🔑 كشك البصمة');
 }
 
 function faultsPanel(){
@@ -98,11 +99,15 @@ function documentsPanel(){
  const rows=(db.documents||[]).slice().sort((a,b)=>a.expiry.localeCompare(b.expiry)).map(d=>{const state=d.expiry<today?'<span class="x-urgent">منتهية!</span>':d.expiry<=soon?'<span class="x-open">تنتهي خلال ٣٠ يوم</span>':'<span class="x-done">سارية</span>';return '<tr><td>'+h(d.employeeName)+'<small>'+h(d.branch)+'</small></td><td>'+h(d.type)+'</td><td><b>'+h(d.expiry)+'</b></td><td>'+state+'</td><td>'+h(d.note||'—')+'</td><td><button type="button" data-doc-del="'+h(d.id)+'">حذف</button></td></tr>'}).join('');
  return '<section class="x-ui" dir="rtl"><div class="x-kicker">ENERGY PLUS / DOCUMENTS</div><h2>وثائق وشهادات الفريق 📄</h2><p>تابع تواريخ انتهاء الشهادات والوثائق (إسعافات أولية، عقود، بطاقات) قبل ما تنتهي.</p><div class="x-form"><select id="x-doc-emp">'+people.map(p=>'<option value="'+h(p.id)+'">'+h(p.name)+' — '+h(p.branch)+'</option>').join('')+'</select><input id="x-doc-type" maxlength="60" placeholder="نوع الوثيقة (مثال: شهادة إسعافات أولية)"><input id="x-doc-expiry" type="date"><input id="x-doc-note" maxlength="300" placeholder="ملاحظة (اختياري)"><button class="primary" id="x-doc-new">إضافة وثيقة</button></div><div class="x-overflow"><table><thead><tr><th>الموظف</th><th>الوثيقة</th><th>تاريخ الانتهاء</th><th>الحالة</th><th>ملاحظة</th><th></th></tr></thead><tbody>'+(rows||'<tr><td colspan="6">لا توجد وثائق مسجلة</td></tr>')+'</tbody></table></div></section>';
 }
+let chatRoom='branch';
 function chatPanel(){
- const msgs=(db.chatMessages||[]).filter(m=>nodeUser.role==='admin'||m.branch===nodeUser.branch);
- const rows=msgs.map(m=>'<div class="x-msg'+(m.manager?' x-msg-mgr':'')+'"><b>'+h(m.name)+(m.manager?' <small>(إدارة)</small>':'')+'</b> '+h(m.body)+'<small>'+h(String(m.at).slice(5,16).replace('T',' '))+'</small></div>').join('');
- return '<section class="x-ui" dir="rtl"><div class="x-kicker">ENERGY PLUS / TEAM CHAT</div><h2>شات الفرع 💬</h2><p>محادثة فريق فرعك — الرسايل نص بس وبتتجدد مع تحديث الصفحة.</p><div class="x-chat">'+ (rows||'<p class="x-hint">لا توجد رسايل بعد. ابدأ الكلام!</p>')+'</div><div class="x-form x-chat-form"><input id="x-chat-body" maxlength="500" placeholder="اكتب رسالتك..."><button class="primary" id="x-chat-send">إرسال</button></div></section>';
+ const isAdmin=nodeUser.role==='admin';
+ const roomMsgs=(db.chatMessages||[]).filter(m=>chatRoom==='all'?m.room==='all':(m.room!=='all'&&(isAdmin?m.branch===(chatBranch||nodeUser.branch):m.branch===nodeUser.branch)));
+ const rows=roomMsgs.map(m=>'<div class="x-msg'+(m.manager?' x-msg-mgr':'')+'"><b>'+h(m.name)+(m.manager?' <small>(إدارة)</small>':'')+'</b> '+h(m.body)+'<small>'+h(String(m.at).slice(5,16).replace('T',' '))+'</small></div>').join('');
+ const branchPick=isAdmin&&chatRoom==='branch'?'<select id="x-chat-branch">'+db.branches.map(b=>'<option '+(b.name===(chatBranch||nodeUser.branch)?'selected':'')+'>'+h(b.name)+'</option>').join('')+'</select>':'';
+ return '<section class="x-ui" dir="rtl"><div class="x-kicker">ENERGY PLUS / TEAM CHAT</div><h2>شات الفريق 💬</h2><p>شات لكل فرع لوحده، وشات عام لكل الموظفين في الفرعين. الرسايل نص بس وبتتجدد مع تحديث الصفحة.</p><div class="x-chips"><button type="button" class="x-chip" id="x-room-branch">'+(chatRoom==='branch'?'▶ ':'')+'شات الفرع</button><button type="button" class="x-chip" id="x-room-all">'+(chatRoom==='all'?'▶ ':'')+'الشات العام</button>'+branchPick+'</div><div class="x-chat">'+ (rows||'<p class="x-hint">لا توجد رسايل بعد. ابدأ الكلام!</p>')+'</div><div class="x-form x-chat-form"><input id="x-chat-body" maxlength="500" placeholder="اكتب رسالتك..."><button class="primary" id="x-chat-send">إرسال</button></div></section>';
 }
+let chatBranch=null;
 function openShiftsBlock(){
  const items=(db.openShifts||[]).slice().sort((a,b)=>a.day.localeCompare(b.day));
  const names={pending:'طلبك معلق',approved:'اتقبلت ✓',rejected:'اترفض'};
@@ -117,7 +122,8 @@ function openShiftsBlock(){
 function kioskPanel(){
  const people=db.staff.filter(s=>!s.legacyProfileId||s.needsActivation!==undefined);
  const rows=people.map(p=>'<tr><td>'+h(p.name)+'<small>'+h(p.branch)+'</small></td><td>'+(p.pinSetAt?'<span class="x-done">له رقم سري ✓</span>':'<span class="x-open">بدون</span>')+'</td><td><button type="button" data-pin-set="'+h(p.id)+'">'+(p.pinSetAt?'تغيير الرقم':'تعيين رقم')+'</button> '+(p.pinSetAt?'<button type="button" data-pin-clear="'+h(p.id)+'">مسح</button>':'')+'</td></tr>').join('');
- return '<section class="x-ui" dir="rtl"><div class="x-kicker">ENERGY PLUS / KIOSK</div><h2>كشك البصمة 🔑</h2><p>عيّن رقم سري لكل موظف، وهو يبصم حضور وانصراف من تابلت الفرع على صفحة الكشك. الرقم بيتخزن مشفر ومحدش يقدر يشوفه.</p><p class="x-hint">صفحة الكشك (تفتح على تابلت الفرع من غير تسجيل دخول): <b dir="ltr">/kiosk.html</b></p><div class="x-overflow"><table><thead><tr><th>الموظف</th><th>الحالة</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div></section>';
+ const on=!!db.rules.kioskEnabled;
+ return '<section class="x-ui" dir="rtl"><div class="x-kicker">ENERGY PLUS / KIOSK</div><h2>كشك البصمة 🔑</h2><p>الكشك <b>مقفول افتراضيًا</b> — البصمة الأساسية هي زرار الـ GPS على موبايل الموظف. فعّل الكشك بس لو عايز تابلت في الفرع.</p><p>الحالة: '+(on?'<span class="x-done">مفعّل</span>':'<span class="x-open">مقفول</span>')+' <button type="button" id="x-kiosk-toggle">'+(on?'قفل الكشك':'تفعيل الكشك')+'</button></p><p class="x-hint">صفحة الكشك (تفتح على تابلت الفرع من غير تسجيل دخول): <b dir="ltr">/kiosk.html</b> — لازم التفعيل الأول عشان تشتغل.</p><p>عيّن رقم سري لكل موظف؛ الرقم بيتخزن مشفر ومحدش يقدر يشوفه.</p><div class="x-overflow"><table><thead><tr><th>الموظف</th><th>الحالة</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div></section>';
 }
 function bindPanels(){
  const newFault=document.querySelector('#x-fault-new');
@@ -138,8 +144,15 @@ function bindPanels(){
  const newDoc=document.querySelector('#x-doc-new');
  if(newDoc)newDoc.onclick=()=>{const employeeId=Number(document.querySelector('#x-doc-emp').value),type=document.querySelector('#x-doc-type').value,expiry=document.querySelector('#x-doc-expiry').value,note=document.querySelector('#x-doc-note').value;if(!employeeId||!type.trim()||!expiry)return toast('اختر الموظف ونوع الوثيقة وتاريخ الانتهاء');nativeAction('doc_add',{employeeId,type,expiry,note}).catch(e=>toast(e.message))};
  document.querySelectorAll('[data-doc-del]').forEach(b=>b.onclick=()=>{if(confirm('حذف الوثيقة؟'))nativeAction('doc_remove',{id:b.dataset.docDel}).catch(e=>toast(e.message))});
+ const roomB=document.querySelector('#x-room-branch'),roomA=document.querySelector('#x-room-all');
+ if(roomB)roomB.onclick=()=>{chatRoom='branch';render()};
+ if(roomA)roomA.onclick=()=>{chatRoom='all';render()};
+ const chatBranchSel=document.querySelector('#x-chat-branch');
+ if(chatBranchSel)chatBranchSel.onchange=e=>{chatBranch=e.target.value;render()};
  const chatSend=document.querySelector('#x-chat-send');
- if(chatSend){const send=()=>{const inp=document.querySelector('#x-chat-body');if(!inp.value.trim())return;nativeAction('chat_send',{body:inp.value}).catch(e=>toast(e.message))};chatSend.onclick=send;document.querySelector('#x-chat-body').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();send()}}}
+ if(chatSend){const send=()=>{const inp=document.querySelector('#x-chat-body');if(!inp.value.trim())return;const data={body:inp.value,room:chatRoom};if(chatRoom==='branch'&&nodeUser.role==='admin'&&chatBranch)data.branch=chatBranch;nativeAction('chat_send',data).catch(e=>toast(e.message))};chatSend.onclick=send;document.querySelector('#x-chat-body').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();send()}}}
+ const kioskToggle=document.querySelector('#x-kiosk-toggle');
+ if(kioskToggle)kioskToggle.onclick=()=>nativeAction('kiosk_toggle',{enabled:!db.rules.kioskEnabled}).catch(e=>toast(e.message));
  const osNew=document.querySelector('#x-os-new');
  if(osNew)osNew.onclick=()=>{const data={day:document.querySelector('#x-os-day').value,start:document.querySelector('#x-os-start').value,end:document.querySelector('#x-os-end').value};if(nodeUser.role==='admin'){data.department=document.querySelector('#x-os-dep').value;data.branch=document.querySelector('#x-os-branch').value}if(!data.day||!data.start||!data.end)return toast('حدد اليوم والوقت');nativeAction('open_shift_create',data).catch(e=>toast(e.message))};
  document.querySelectorAll('[data-os-claim]').forEach(b=>b.onclick=()=>nativeAction('open_shift_claim',{id:b.dataset.osClaim}).catch(e=>toast(e.message)));
@@ -188,7 +201,7 @@ render=function(){
   else if(desired==='announcements')app.innerHTML=announcementsPanel();
   else if(desired==='documents'&&canReview())app.innerHTML=documentsPanel();
   else if(desired==='chat')app.innerHTML=chatPanel();
-  else if(desired==='kiosk-admin'&&canReview())app.innerHTML=kioskPanel();
+  else if(desired==='kiosk-admin'&&nodeUser.role==='admin')app.innerHTML=kioskPanel();
   bindPanels();
   handoverCard();
   announcementBanner();
@@ -197,5 +210,5 @@ render=function(){
 
 const st=document.createElement('style');
 st.textContent='.x-ui{direction:rtl;background:linear-gradient(140deg,#181915,#080907);color:#f5efe2;border:1px solid #65552e;border-radius:24px;padding:clamp(16px,3vw,30px);min-height:60vh}.x-kicker{font-size:11px;color:#dcc17e;letter-spacing:2px}.x-ui h2{font-size:clamp(24px,4vw,40px);margin:12px 0;color:#efd194}.x-ui p{color:#beb7a8}.x-hint{color:#c6bea8;font-size:13px}.x-form{display:grid;gap:10px;margin:16px 0 24px}.x-form input,.x-form select,.x-form textarea,.x-handover textarea{background:#22231d;border:1px solid #544a32;color:#f5efe2;border-radius:12px;padding:12px;font-family:inherit}.x-overflow{overflow:auto;margin-bottom:18px}.x-ui table{width:100%;min-width:640px;border-collapse:collapse}.x-ui th,.x-ui td{padding:13px;border-bottom:1px solid #474336;text-align:right;vertical-align:top}.x-ui td small{display:block;color:#bbb09c}.x-ui td button{border:1px solid #75643c;background:#27261e;color:#f0dbad;border-radius:99px;padding:8px 12px;cursor:pointer;margin:2px}.x-urgent{color:#ff9d7a;font-weight:bold}.x-open{color:#f0d393;font-weight:bold}.x-done{color:#9fdc9f;font-weight:bold}.x-handover{background:#22231d;border:1px solid #65552e;border-radius:16px;padding:14px;margin-bottom:16px;color:#f5efe2}.x-handover small{display:block;color:#bbb09c;margin-top:6px}.x-handover label{display:block}.x-handover textarea{width:100%;margin-top:8px}';
-st.textContent+='.x-chips{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}.x-chip{background:#22231d;border:1px solid #544a32;color:#f5efe2;border-radius:99px;padding:8px 14px;cursor:pointer}.x-avail input#x-avail-note{background:#22231d;border:1px solid #544a32;color:#f5efe2;border-radius:12px;padding:12px;font-family:inherit;width:100%;margin-bottom:10px}.x-ann-banner button{border:1px solid #75643c;background:#27261e;color:#f0dbad;border-radius:99px;padding:8px 14px;cursor:pointer;margin-top:8px}.x-avail{margin-top:8px}';st.textContent+='.x-chat{display:grid;gap:8px;margin:16px 0;max-height:50vh;overflow:auto}.x-msg{background:#22231d;border:1px solid #544a32;border-radius:14px;padding:10px 14px;color:#f5efe2}.x-msg small{display:block;color:#bbb09c;font-size:11px;margin-top:4px}.x-msg-mgr{border-color:#dcc17e}.x-chat-form{grid-template-columns:1fr auto;display:grid}';document.head.append(st);
+st.textContent+='.x-chips .x-chip{cursor:pointer}.x-chips{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}.x-chip{background:#22231d;border:1px solid #544a32;color:#f5efe2;border-radius:99px;padding:8px 14px;cursor:pointer}.x-avail input#x-avail-note{background:#22231d;border:1px solid #544a32;color:#f5efe2;border-radius:12px;padding:12px;font-family:inherit;width:100%;margin-bottom:10px}.x-ann-banner button{border:1px solid #75643c;background:#27261e;color:#f0dbad;border-radius:99px;padding:8px 14px;cursor:pointer;margin-top:8px}.x-avail{margin-top:8px}';st.textContent+='.x-chat{display:grid;gap:8px;margin:16px 0;max-height:50vh;overflow:auto}.x-msg{background:#22231d;border:1px solid #544a32;border-radius:14px;padding:10px 14px;color:#f5efe2}.x-msg small{display:block;color:#bbb09c;font-size:11px;margin-top:4px}.x-msg-mgr{border-color:#dcc17e}.x-chat-form{grid-template-columns:1fr auto;display:grid}';document.head.append(st);
 })();
