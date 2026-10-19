@@ -34,7 +34,7 @@ const opts=branches.map(x=>'<option value="'+h(x)+'">'+h(x)+'</option>').join(''
 const doctorOpts=ds.map(x=>'<option value="'+h(x.id)+'" data-branch="'+h(x.branch)+'">'+h(x.name)+' — '+h(x.branch)+'</option>').join('');
 dialog('حجز موعد أسسمنت','<label>الفرع<select required name="branch">'+opts+'</select></label><label>الدكتور<select required name="doctorId">'+doctorOpts+'</select></label><label>اسم العميل<input required maxlength="120" name="patientName"></label><label>رقم الهاتف<input required type="tel" name="phone"></label><label>التاريخ<input required type="date" name="day"></label><label>الوقت<input required type="time" step="1800" name="time"></label><label>ملاحظات الريسبشن<textarea name="receptionNotes" maxlength="1000"></textarea></label>',f=>nativeAction('assessment_create',Object.fromEntries(f)));
 const branch=document.querySelector('#fields [name=branch]'),doc=document.querySelector('#fields [name=doctorId]');
-const sync=()=>{[...doc.options].forEach(o=>o.hidden=o.dataset.branch!==branch.value);doc.value=[...doc.options].find(o=>!o.hidden)?.value||''};branch.onchange=sync;sync();
+const sync=()=>{const match=ds.filter(x=>x.branch===branch.value);doc.innerHTML=match.length?match.map(x=>'<option value="'+h(x.id)+'">'+h(x.name)+' — '+h(x.branch)+'</option>').join(''):'<option value="" selected disabled>لا يوجد دكتور معتمد في هذا الفرع</option>'};branch.onchange=sync;sync();
 }
 function detail(a){
 if(!a)return;const medical=canMedical();const sales=canBook();const statuses=medical?['booked','attended','completed','no_show','cancelled']:['booked','cancelled'];
