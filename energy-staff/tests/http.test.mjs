@@ -54,3 +54,4 @@ test('HTTP password registration, approval, CSRF and logout flow',async()=>{try{
  const current={cookie:changed.cookie,csrf:changed.data.csrf};const logout=await request('/api/logout',{method:'POST',session:current});assert.equal(logout.status,200);const after=await request('/api/members',{session:current});assert.equal(after.status,401);
  assert.equal((await request('/.env')).status,404);
  }finally{server.closeAllConnections();await new Promise(r=>server.close(r))}});
+

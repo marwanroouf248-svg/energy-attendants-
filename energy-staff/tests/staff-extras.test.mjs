@@ -1,5 +1,5 @@
 import test from 'node:test';import assert from 'node:assert/strict';
-import {emptyWorkspace,employeeAction,visibleWorkspace,positions} from '../server/domain.mjs';
+import {emptyWorkspace,employeeAction,visibleWorkspace,positions,hydrateWorkspace,findStaffByPin,kioskPunch} from '../server/domain.mjs';
 
 function seed(){
  const db=emptyWorkspace();
@@ -214,4 +214,110 @@ test('documents: manager scope, expiry validation, remove',()=>{
  employeeAction(db,mgr,'doc_remove',{id:db.documents[0].id},t+1000);
  assert.equal(db.documents.length,0);
  assert.throws(()=>employeeAction(db,mgr,'doc_remove',{id:'nope'},t),/NOT_FOUND/);
+});
+
+test('branch reconciliation: main merges into Vodafone, Rakhawy labeled women branch, nothing lost',()=>{
+ const payload={branches:[{name:'الفرع الرئيسي',lat:null,lng:null},{name:'فرع فودافون',lat:29.9631855,lng:32.5572978},{name:'فرع الرخاوي',lat:29.964248,lng:32.5560476}],
+  staff:[{id:1,name:'سيد',branch:'الفرع الرئيسي',department:'التدريب'},{id:2,name:'منى',branch:'فرع الرخاوي',department:'السيلز'}],
+  punches:[{id:1,employeeId:1,branch:'الفرع الرئيسي',in:'2026-10-19T06:00:00.000Z',out:'2026-10-19T14:00:00.000Z'},{id:2,employeeId:2,branch:'فرع الرخاوي',in:'2026-10-19T06:00:00.000Z',out:'2026-10-19T14:00:00.000Z'}],
+  shiftAssignments:[{id:'s1',employeeId:1,branch:'الفرع الرئيسي',day:'2026-10-20',start:'09:00',end:'17:00'}],
+  announcements:[{id:'a1',title:'t',body:'b',scope:{kind:'department',branch:'فرع الرخاوي',department:'السيلز'},createdById:9,createdAt:'2026-10-19T00:00:00.000Z'}]};
+ const db=hydrateWorkspace(payload,[]);
+ assert.deepEqual(db.branches.map(b=>b.name).sort(),['فرع الرخاوي — سيدات','فرع فودافون'].sort());
+ assert.equal(db.staff.find(s=>s.id===1).branch,'فرع فودافون');
+ assert.equal(db.staff.find(s=>s.id===2).branch,'فرع الرخاوي — سيدات');
+ assert.equal(db.shiftAssignments[0].branch,'فرع فودافون');
+ assert.equal(db.punches[0].branch,'فرع فودافون');
+ assert.equal(db.punches[1].branch,'فرع الرخاوي — سيدات');
+ assert.equal(db.announcements[0].scope.branch,'فرع الرخاوي — سيدات');
+ // Vodafone branch keeps its GPS; women branch gets legacy GPS
+ assert.equal(db.branches.find(b=>b.name==='فرع فودافون').lat,29.9631855);
+ assert.equal(db.branches.find(b=>b.name==='فرع الرخاوي — سيدات').lat,29.964248);
+ // idempotent
+ const again=hydrateWorkspace(JSON.parse(JSON.stringify(db)),[]);
+ assert.deepEqual(again.branches.map(b=>b.name).sort(),['فرع الرخاوي — سيدات','فرع فودافون'].sort());
+});
+
+test('branch chat: scoped to branch, trimmed to last 200',()=>{
+ const {db,emp,mgr,otherBranch}=seed();
+ employeeAction(db,emp,'chat_send',{body:'صباح الخير يا فريق'},t);
+ employeeAction(db,mgr,'chat_send',{body:'الاجتماع اتنقل ١١'},t+1000);
+ assert.equal(db.chatMessages.length,2);
+ assert.equal(db.chatMessages[1].manager,true);
+ assert.equal(db.chatMessages[0].manager,false);
+ assert.equal(visibleWorkspace(db,emp).chatMessages.length,2);
+ assert.equal(visibleWorkspace(db,otherBranch).chatMessages.length,0);
+ assert.throws(()=>employeeAction(db,emp,'chat_send',{body:'   '},t),/INVALID_INPUT/);
+ for(let i=0;i<205;i++)employeeAction(db,emp,'chat_send',{body:'رسالة '+i},t+2000+i);
+ assert.equal(db.chatMessages.filter(m=>m.branch==='A').length,200);
+ assert.equal(visibleWorkspace(db,emp).chatMessages.length,50);
+});
+
+test('open shifts: manager posts, employee claims, approval books the shift atomically',()=>{
+ const {db,emp,emp2,mgr,otherBranch,admin}=seed();
+ // only manager/admin can post
+ assert.throws(()=>employeeAction(db,emp,'open_shift_create',{day:'2026-10-21',start:'09:00',end:'17:00'},t),/FORBIDDEN/);
+ employeeAction(db,mgr,'open_shift_create',{day:'2026-10-21',start:'09:00',end:'17:00',graceMinutes:10},t);
+ const o=db.openShifts[0];
+ assert.equal(o.branch,'A');assert.equal(o.department,'التدريب');assert.equal(o.status,'open');
+ // other branch manager cannot post outside scope
+ assert.throws(()=>employeeAction(db,otherBranch,'open_shift_create',{day:'2026-10-21',start:'09:00',end:'17:00',branch:'A'},t),/FORBIDDEN/);
+ // admin posts for any branch+department
+ employeeAction(db,admin,'open_shift_create',{branch:'B',department:'السيلز',day:'2026-10-21',start:'14:00',end:'22:00'},t);
+ // visibility: emp sees own dept open shift, not the sales one
+ assert.equal(visibleWorkspace(db,emp).openShifts.length,1);
+ assert.equal(visibleWorkspace(db,otherBranch).openShifts.length,1);
+ // claim rules
+ employeeAction(db,emp,'open_shift_claim',{id:o.id},t+1000);
+ assert.throws(()=>employeeAction(db,emp,'open_shift_claim',{id:o.id},t+2000),/CONFLICT/);
+ employeeAction(db,emp2,'open_shift_claim',{id:o.id},t+1000);
+ // employee with a shift that day cannot claim
+ employeeAction(db,mgr,'shift_assign',{employeeId:1,day:'2026-10-22',start:'09:00',end:'17:00'},t);
+ employeeAction(db,mgr,'open_shift_create',{day:'2026-10-22',start:'18:00',end:'23:00'},t);
+ assert.throws(()=>employeeAction(db,emp,'open_shift_claim',{id:db.openShifts.at(-1).id},t),/SHIFT_EXISTS/);
+ // other-branch manager cannot review; employee cannot review
+ const claim1=o.claims[0];
+ assert.throws(()=>employeeAction(db,otherBranch,'open_shift_review',{id:o.id,claimId:claim1.id,approved:true},t),/FORBIDDEN/);
+ assert.throws(()=>employeeAction(db,emp,'open_shift_review',{id:o.id,claimId:claim1.id,approved:true},t),/FORBIDDEN/);
+ // approve: shift booked for claimer, others rejected
+ employeeAction(db,mgr,'open_shift_review',{id:o.id,claimId:claim1.id,approved:true},t+3000);
+ assert.equal(o.status,'filled');
+ assert.equal(claim1.status,'approved');
+ assert.equal(o.claims[1].status,'rejected');
+ const booked=db.shiftAssignments.find(x=>Number(x.employeeId)===1&&x.day==='2026-10-21');
+ assert.ok(booked);assert.equal(booked.graceMinutes,10);
+ // reviewing a filled shift fails
+ assert.throws(()=>employeeAction(db,mgr,'open_shift_review',{id:o.id,claimId:claim1.id,approved:true},t),/NOT_FOUND/);
+});
+
+test('kiosk PIN: manager sets and clears, uniqueness enforced, hash never leaks to employee views',()=>{
+ const {db,emp,mgr,otherBranch}=seed();
+ assert.throws(()=>employeeAction(db,mgr,'kiosk_pin_set',{employeeId:1,pin:'12'},t),/PIN_RULES/);
+ assert.throws(()=>employeeAction(db,mgr,'kiosk_pin_set',{employeeId:1,pin:'12345a'},t),/PIN_RULES/);
+ assert.throws(()=>employeeAction(db,emp,'kiosk_pin_set',{employeeId:1,pin:'2468'},t),/FORBIDDEN/);
+ assert.throws(()=>employeeAction(db,otherBranch,'kiosk_pin_set',{employeeId:1,pin:'2468'},t),/FORBIDDEN/);
+ employeeAction(db,mgr,'kiosk_pin_set',{employeeId:1,pin:'2468'},t);
+ const target=db.staff.find(s=>s.id===1);
+ assert.ok(target.pinHash);assert(!String(target.pinHash).includes('2468'));
+ // uniqueness
+ employeeAction(db,mgr,'kiosk_pin_set',{employeeId:3,pin:'1357'},t);
+ assert.throws(()=>employeeAction(db,mgr,'kiosk_pin_set',{employeeId:2,pin:'2468'},t),/PIN_TAKEN/);
+ // visibility: employee view never carries pinHash
+ assert(!JSON.stringify(visibleWorkspace(db,emp).staff).includes('pinHash'));
+ assert(!JSON.stringify(visibleWorkspace(db,mgr).staff).includes('pinHash'));
+ // findStaffByPin resolves branch-scoped
+ assert.equal(findStaffByPin(db,'A','2468').id,1);
+ assert.equal(findStaffByPin(db,'B','2468'),null);
+ assert.equal(findStaffByPin(db,'A','0000'),null);
+ // kiosk punch flow without GPS
+ kioskPunch(db,target,'in',t+86400000);
+ assert.equal(db.punches[0].source,'kiosk');
+ assert.throws(()=>kioskPunch(db,target,'in',t+86400000+1000),/ALREADY_CHECKED_IN/);
+ kioskPunch(db,target,'out',t+86400000+8*36e5);
+ assert.ok(db.punches[0].out);
+ assert.throws(()=>kioskPunch(db,target,'out',t+86400000+9*36e5),/NO_OPEN_SHIFT/);
+ assert.throws(()=>kioskPunch(db,target,'side',t),/INVALID_INPUT/);
+ // clear PIN
+ employeeAction(db,mgr,'kiosk_pin_clear',{employeeId:1},t+2000);
+ assert.equal(db.staff.find(s=>s.id===1).pinHash,undefined);
 });

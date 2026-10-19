@@ -1,0 +1,14 @@
+<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Energy Staff — كشك البصمة</title><link rel="stylesheet" href="style.css"><link rel="icon" href="assets/energy-plus-logo.png"><style>
+body{background:linear-gradient(140deg,#181915,#080907);color:#f5efe2;font-family:inherit;min-height:100vh;display:grid;place-items:center;margin:0}
+.kiosk{width:min(430px,92vw);border:1px solid #65552e;border-radius:24px;padding:28px;display:grid;gap:16px;background:#141510}
+.kiosk h1{color:#efd194;font-size:26px;margin:0;text-align:center}
+.kiosk p{color:#beb7a8;text-align:center;margin:0}
+.kiosk select,.kiosk input{background:#22231d;border:1px solid #544a32;color:#f5efe2;border-radius:14px;padding:16px;font-size:20px;text-align:center;width:100%;box-sizing:border-box;letter-spacing:4px}
+.kiosk select{letter-spacing:0;font-size:16px}
+.kiosk .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.kiosk button{border:1px solid #75643c;border-radius:16px;padding:18px;font-size:20px;cursor:pointer;font-weight:bold}
+.kiosk .in{background:#1f3325;color:#9fdc9f}.kiosk .out{background:#33231f;color:#ff9d7a}
+.kiosk button:disabled{opacity:.4;cursor:default}
+#kmsg{text-align:center;min-height:24px;font-weight:bold}
+.brand{text-align:center;color:#dcc17e;letter-spacing:2px;font-size:11px}
+</style></head><body><main class="kiosk"><div class="brand">ENERGY PLUS STAFF</div><h1>كشك البصمة ⚡</h1><p>اختار الفرع واكتب رقمك السري</p><select id="kbranch"></select><input id="kpin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="8" placeholder="الرقم السري" autocomplete="off"><div class="row"><button class="in" id="kin">تسجيل حضور</button><button class="out" id="kout">تسجيل انصراف</button></div><div id="kmsg"></div></main><script src="kiosk.js"></script></body></html>

@@ -74,6 +74,34 @@ ok('documents panel renders with expiry state',docHtml.includes('وثائق وش
 run("nodeUser={role:'employee',id:7,full_name:'كابتن تجريبي',position:'كابتن',branch:'فرع فودافون'};page='documents';render()");
 ok('employee cannot open documents panel',!String(nodes['#app'].innerHTML).includes('x-doc-new'));
 
+// Chat page
+run("nodeUser={role:'employee',id:7,full_name:'كابتن تجريبي',position:'كابتن',branch:'فرع فودافون'};db.chatMessages=[{id:'m1',employeeId:2,name:'مدير',branch:'فرع فودافون',department:'التدريب',body:'الاجتماع ١١',at:'2026-10-19T09:00:00.000Z',manager:true},{id:'m2',employeeId:9,name:'غريب',branch:'فرع الرخاوي',department:'السيلز',body:'لازم لا يظهر',at:'2026-10-19T09:00:00.000Z',manager:false}]");
+run("page='chat';render()");
+const chatHtml=String(nodes['#app'].innerHTML);
+ok('chat page renders with branch messages only',chatHtml.includes('الاجتماع ١١')&&!chatHtml.includes('لازم لا يظهر'));
+ok('chat send box present',chatHtml.includes('x-chat-send'));
+
+// Open shifts: manager create form + review buttons; employee claim button
+run("nodeUser={role:'manager',id:2,full_name:'مدير',position:'كابتن',branch:'فرع فودافون'};db.openShifts=[{id:'o1',branch:'فرع فودافون',department:'التدريب',day:'2026-10-22',start:'18:00',end:'23:00',graceMinutes:10,status:'open',claims:[{id:'c1',employeeId:7,name:'كابتن تجريبي',at:'2026-10-19T10:00:00.000Z',status:'pending'}],createdBy:2,createdByName:'مدير',createdAt:'2026-10-19T09:00:00.000Z'}];page='shift-swap';render()");
+const osHtml=String(nodes['#app'].innerHTML);
+ok('open shifts block renders',osHtml.includes('الشفتات المفتوحة'));
+ok('manager sees open shift create form',osHtml.includes('x-os-new'));
+ok('manager sees claim review buttons',osHtml.includes('data-os-ok')&&osHtml.includes('data-os-no'));
+run("nodeUser={role:'employee',id:8,full_name:'زميل',position:'كابتن',branch:'فرع فودافون'};render()");
+ok('employee sees claim button on open shift',String(nodes['#app'].innerHTML).includes('data-os-claim'));
+
+// Kiosk admin page for manager
+run("nodeUser={role:'manager',id:2,full_name:'مدير',position:'كابتن',branch:'فرع فودافون'};page='kiosk-admin';render()");
+const kioskHtml=String(nodes['#app'].innerHTML);
+ok('kiosk admin page renders with PIN controls',kioskHtml.includes('كشك البصمة')&&kioskHtml.includes('data-pin-set'));
+ok('kiosk page path documented',kioskHtml.includes('/kiosk.html'));
+
+// Kiosk public page files
+const kioskPage=fs.readFileSync('dist/kiosk.html','utf8');
+ok('kiosk.html references external script only (CSP)',kioskPage.includes('<script src="kiosk.js"></script>')&&!kioskPage.includes('<script>'));
+const kioskJs=fs.readFileSync('dist/kiosk.js','utf8');
+ok('kiosk.js posts to the kiosk endpoint',kioskJs.includes('/api/kiosk/punch'));
+
 (async()=>{
  await vm.runInContext("nativeAction('punch_out',{coords:{latitude:29.96,longitude:32.55,accuracy:5}})",ctx);
  const captured=run("globalThis.__captured");

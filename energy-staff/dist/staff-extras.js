@@ -5,7 +5,7 @@ const oldRender=render;
 const h=x=>esc(String(x??''));
 const loggedIn=()=>!!nodeUser;
 const canReview=()=>nodeUser&&(nodeUser.role==='admin'||nodeUser.role==='manager');
-const pages=['faults','shift-swap','objections','announcements','documents'];
+const pages=['announcements','faults','shift-swap','objections','documents','chat','kiosk-admin'];
 const todayCairo=()=>new Date().toLocaleDateString('en-CA',{timeZone:'Africa/Cairo'});
 let handoverDraft='';
 
@@ -31,7 +31,8 @@ function nav(){
  add('faults','⚒ بلاغات الأعطال');
  add('shift-swap','⇄ تبديل الشفتات');
  add('objections','✦ النقاط والاعتراضات');
- if(canReview())add('documents','📄 وثائق الفريق');
+ add('chat','💬 شات الفرع');
+ if(canReview()){add('documents','📄 وثائق الفريق');add('kiosk-admin','🔑 كشك البصمة');}
 }
 
 function faultsPanel(){
@@ -97,6 +98,27 @@ function documentsPanel(){
  const rows=(db.documents||[]).slice().sort((a,b)=>a.expiry.localeCompare(b.expiry)).map(d=>{const state=d.expiry<today?'<span class="x-urgent">منتهية!</span>':d.expiry<=soon?'<span class="x-open">تنتهي خلال ٣٠ يوم</span>':'<span class="x-done">سارية</span>';return '<tr><td>'+h(d.employeeName)+'<small>'+h(d.branch)+'</small></td><td>'+h(d.type)+'</td><td><b>'+h(d.expiry)+'</b></td><td>'+state+'</td><td>'+h(d.note||'—')+'</td><td><button type="button" data-doc-del="'+h(d.id)+'">حذف</button></td></tr>'}).join('');
  return '<section class="x-ui" dir="rtl"><div class="x-kicker">ENERGY PLUS / DOCUMENTS</div><h2>وثائق وشهادات الفريق 📄</h2><p>تابع تواريخ انتهاء الشهادات والوثائق (إسعافات أولية، عقود، بطاقات) قبل ما تنتهي.</p><div class="x-form"><select id="x-doc-emp">'+people.map(p=>'<option value="'+h(p.id)+'">'+h(p.name)+' — '+h(p.branch)+'</option>').join('')+'</select><input id="x-doc-type" maxlength="60" placeholder="نوع الوثيقة (مثال: شهادة إسعافات أولية)"><input id="x-doc-expiry" type="date"><input id="x-doc-note" maxlength="300" placeholder="ملاحظة (اختياري)"><button class="primary" id="x-doc-new">إضافة وثيقة</button></div><div class="x-overflow"><table><thead><tr><th>الموظف</th><th>الوثيقة</th><th>تاريخ الانتهاء</th><th>الحالة</th><th>ملاحظة</th><th></th></tr></thead><tbody>'+(rows||'<tr><td colspan="6">لا توجد وثائق مسجلة</td></tr>')+'</tbody></table></div></section>';
 }
+function chatPanel(){
+ const msgs=(db.chatMessages||[]).filter(m=>nodeUser.role==='admin'||m.branch===nodeUser.branch);
+ const rows=msgs.map(m=>'<div class="x-msg'+(m.manager?' x-msg-mgr':'')+'"><b>'+h(m.name)+(m.manager?' <small>(إدارة)</small>':'')+'</b> '+h(m.body)+'<small>'+h(String(m.at).slice(5,16).replace('T',' '))+'</small></div>').join('');
+ return '<section class="x-ui" dir="rtl"><div class="x-kicker">ENERGY PLUS / TEAM CHAT</div><h2>شات الفرع 💬</h2><p>محادثة فريق فرعك — الرسايل نص بس وبتتجدد مع تحديث الصفحة.</p><div class="x-chat">'+ (rows||'<p class="x-hint">لا توجد رسايل بعد. ابدأ الكلام!</p>')+'</div><div class="x-form x-chat-form"><input id="x-chat-body" maxlength="500" placeholder="اكتب رسالتك..."><button class="primary" id="x-chat-send">إرسال</button></div></section>';
+}
+function openShiftsBlock(){
+ const items=(db.openShifts||[]).slice().sort((a,b)=>a.day.localeCompare(b.day));
+ const names={pending:'طلبك معلق',approved:'اتقبلت ✓',rejected:'اترفض'};
+ const rows=items.map(o=>{
+  const myClaim=o.claims.find(c=>Number(c.employeeId)===Number(nodeUser.id));
+  const claims=canReview()&&o.claims.length?'<small>الطلبات: '+o.claims.map(c=>h(c.name)+' ('+(c.status==='pending'?'معلق':c.status==='approved'?'مقبول':'مرفوض')+')'+(c.status==='pending'?' <button type="button" data-os-ok="'+h(o.id)+':'+h(c.id)+'">قبول</button> <button type="button" data-os-no="'+h(o.id)+':'+h(c.id)+'">رفض</button>':'')).join('، ')+'</small>':'';
+  const action=!canReview()&&o.status==='open'?myClaim?h(names[myClaim.status]):'<button type="button" data-os-claim="'+h(o.id)+'">احجز الشفت</button>':'';
+  return '<tr><td><b>'+h(o.day)+'</b><small>'+h(o.start)+' — '+h(o.end)+'</small></td><td>'+h(o.department)+'</td><td>'+(o.status==='open'?'مفتوح':'اتملى ✓')+'</td><td>'+action+claims+'</td></tr>'}).join('');
+ const form=canReview()?'<h3>انشر شفت مفتوح</h3><div class="x-form"><input id="x-os-day" type="date"><input id="x-os-start" type="time"><input id="x-os-end" type="time">'+(nodeUser.role==='admin'?'<select id="x-os-dep">'+Object.values(positions).map(d=>'<option>'+h(d)+'</option>').join('')+'</select><select id="x-os-branch">'+db.branches.map(b=>'<option>'+h(b.name)+'</option>').join('')+'</select>':'')+'<button class="primary" id="x-os-new">نشر الشفت</button></div>':'';
+ return '<section class="x-avail"><h3>الشفتات المفتوحة</h3><p class="x-hint">المدير ينشر شفت محتاج حد، والموظف يحجزه، والحجز ميتمش غير بموافقة المدير.</p>'+form+'<div class="x-overflow"><table><thead><tr><th>اليوم والوقت</th><th>القسم</th><th>الحالة</th><th></th></tr></thead><tbody>'+(rows||'<tr><td colspan="4">لا توجد شفتات مفتوحة</td></tr>')+'</tbody></table></div></section>';
+}
+function kioskPanel(){
+ const people=db.staff.filter(s=>!s.legacyProfileId||s.needsActivation!==undefined);
+ const rows=people.map(p=>'<tr><td>'+h(p.name)+'<small>'+h(p.branch)+'</small></td><td>'+(p.pinSetAt?'<span class="x-done">له رقم سري ✓</span>':'<span class="x-open">بدون</span>')+'</td><td><button type="button" data-pin-set="'+h(p.id)+'">'+(p.pinSetAt?'تغيير الرقم':'تعيين رقم')+'</button> '+(p.pinSetAt?'<button type="button" data-pin-clear="'+h(p.id)+'">مسح</button>':'')+'</td></tr>').join('');
+ return '<section class="x-ui" dir="rtl"><div class="x-kicker">ENERGY PLUS / KIOSK</div><h2>كشك البصمة 🔑</h2><p>عيّن رقم سري لكل موظف، وهو يبصم حضور وانصراف من تابلت الفرع على صفحة الكشك. الرقم بيتخزن مشفر ومحدش يقدر يشوفه.</p><p class="x-hint">صفحة الكشك (تفتح على تابلت الفرع من غير تسجيل دخول): <b dir="ltr">/kiosk.html</b></p><div class="x-overflow"><table><thead><tr><th>الموظف</th><th>الحالة</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div></section>';
+}
 function bindPanels(){
  const newFault=document.querySelector('#x-fault-new');
  if(newFault)newFault.onclick=()=>{const machine=document.querySelector('#x-machine').value,urgency=document.querySelector('#x-urgency').value,note=document.querySelector('#x-note').value;if(!machine.trim()||!note.trim())return toast('اكتب اسم الجهاز ووصف العطل');nativeAction('fault_create',{machine,note,urgency}).catch(e=>toast(e.message))};
@@ -116,6 +138,15 @@ function bindPanels(){
  const newDoc=document.querySelector('#x-doc-new');
  if(newDoc)newDoc.onclick=()=>{const employeeId=Number(document.querySelector('#x-doc-emp').value),type=document.querySelector('#x-doc-type').value,expiry=document.querySelector('#x-doc-expiry').value,note=document.querySelector('#x-doc-note').value;if(!employeeId||!type.trim()||!expiry)return toast('اختر الموظف ونوع الوثيقة وتاريخ الانتهاء');nativeAction('doc_add',{employeeId,type,expiry,note}).catch(e=>toast(e.message))};
  document.querySelectorAll('[data-doc-del]').forEach(b=>b.onclick=()=>{if(confirm('حذف الوثيقة؟'))nativeAction('doc_remove',{id:b.dataset.docDel}).catch(e=>toast(e.message))});
+ const chatSend=document.querySelector('#x-chat-send');
+ if(chatSend){const send=()=>{const inp=document.querySelector('#x-chat-body');if(!inp.value.trim())return;nativeAction('chat_send',{body:inp.value}).catch(e=>toast(e.message))};chatSend.onclick=send;document.querySelector('#x-chat-body').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();send()}}}
+ const osNew=document.querySelector('#x-os-new');
+ if(osNew)osNew.onclick=()=>{const data={day:document.querySelector('#x-os-day').value,start:document.querySelector('#x-os-start').value,end:document.querySelector('#x-os-end').value};if(nodeUser.role==='admin'){data.department=document.querySelector('#x-os-dep').value;data.branch=document.querySelector('#x-os-branch').value}if(!data.day||!data.start||!data.end)return toast('حدد اليوم والوقت');nativeAction('open_shift_create',data).catch(e=>toast(e.message))};
+ document.querySelectorAll('[data-os-claim]').forEach(b=>b.onclick=()=>nativeAction('open_shift_claim',{id:b.dataset.osClaim}).catch(e=>toast(e.message)));
+ document.querySelectorAll('[data-os-ok]').forEach(b=>b.onclick=()=>{const [id,claimId]=b.dataset.osOk.split(':');nativeAction('open_shift_review',{id,claimId,approved:true}).catch(e=>toast(e.message))});
+ document.querySelectorAll('[data-os-no]').forEach(b=>b.onclick=()=>{const [id,claimId]=b.dataset.osNo.split(':');dialog('رفض طلب الشفت','<label>سبب الرفض<textarea name="note" maxlength="500"></textarea></label>',f=>nativeAction('open_shift_review',{id,claimId,approved:false,note:f.get('note')}))});
+ document.querySelectorAll('[data-pin-set]').forEach(b=>b.onclick=()=>dialog('تعيين رقم سري للكشك','<label>الرقم السري (من ٤ لـ ٨ أرقام)<input required name="pin" type="password" inputmode="numeric" pattern="[0-9]{4,8}" maxlength="8"></label><p class="x-hint">قوله للموظف بشكل شخصي. الرقم بيتخزن مشفر.</p>',f=>nativeAction('kiosk_pin_set',{employeeId:Number(b.dataset.pinSet),pin:f.get('pin')})));
+ document.querySelectorAll('[data-pin-clear]').forEach(b=>b.onclick=()=>{if(confirm('مسح الرقم السري للموظف ده؟'))nativeAction('kiosk_pin_clear',{employeeId:Number(b.dataset.pinClear)}).catch(e=>toast(e.message))});
 }
 
 function announcementBanner(){
@@ -152,10 +183,12 @@ render=function(){
  const app=document.querySelector('#app');
  if(app&&loggedIn()){
   if(desired==='faults')app.innerHTML=faultsPanel();
-  else if(desired==='shift-swap')app.innerHTML=swapPanel()+availabilityBlock();
+  else if(desired==='shift-swap')app.innerHTML=swapPanel()+openShiftsBlock()+availabilityBlock();
   else if(desired==='objections')app.innerHTML=objectionsPanel();
   else if(desired==='announcements')app.innerHTML=announcementsPanel();
   else if(desired==='documents'&&canReview())app.innerHTML=documentsPanel();
+  else if(desired==='chat')app.innerHTML=chatPanel();
+  else if(desired==='kiosk-admin'&&canReview())app.innerHTML=kioskPanel();
   bindPanels();
   handoverCard();
   announcementBanner();
@@ -164,5 +197,5 @@ render=function(){
 
 const st=document.createElement('style');
 st.textContent='.x-ui{direction:rtl;background:linear-gradient(140deg,#181915,#080907);color:#f5efe2;border:1px solid #65552e;border-radius:24px;padding:clamp(16px,3vw,30px);min-height:60vh}.x-kicker{font-size:11px;color:#dcc17e;letter-spacing:2px}.x-ui h2{font-size:clamp(24px,4vw,40px);margin:12px 0;color:#efd194}.x-ui p{color:#beb7a8}.x-hint{color:#c6bea8;font-size:13px}.x-form{display:grid;gap:10px;margin:16px 0 24px}.x-form input,.x-form select,.x-form textarea,.x-handover textarea{background:#22231d;border:1px solid #544a32;color:#f5efe2;border-radius:12px;padding:12px;font-family:inherit}.x-overflow{overflow:auto;margin-bottom:18px}.x-ui table{width:100%;min-width:640px;border-collapse:collapse}.x-ui th,.x-ui td{padding:13px;border-bottom:1px solid #474336;text-align:right;vertical-align:top}.x-ui td small{display:block;color:#bbb09c}.x-ui td button{border:1px solid #75643c;background:#27261e;color:#f0dbad;border-radius:99px;padding:8px 12px;cursor:pointer;margin:2px}.x-urgent{color:#ff9d7a;font-weight:bold}.x-open{color:#f0d393;font-weight:bold}.x-done{color:#9fdc9f;font-weight:bold}.x-handover{background:#22231d;border:1px solid #65552e;border-radius:16px;padding:14px;margin-bottom:16px;color:#f5efe2}.x-handover small{display:block;color:#bbb09c;margin-top:6px}.x-handover label{display:block}.x-handover textarea{width:100%;margin-top:8px}';
-st.textContent+='.x-chips{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}.x-chip{background:#22231d;border:1px solid #544a32;color:#f5efe2;border-radius:99px;padding:8px 14px;cursor:pointer}.x-avail input#x-avail-note{background:#22231d;border:1px solid #544a32;color:#f5efe2;border-radius:12px;padding:12px;font-family:inherit;width:100%;margin-bottom:10px}.x-ann-banner button{border:1px solid #75643c;background:#27261e;color:#f0dbad;border-radius:99px;padding:8px 14px;cursor:pointer;margin-top:8px}.x-avail{margin-top:8px}';document.head.append(st);
+st.textContent+='.x-chips{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}.x-chip{background:#22231d;border:1px solid #544a32;color:#f5efe2;border-radius:99px;padding:8px 14px;cursor:pointer}.x-avail input#x-avail-note{background:#22231d;border:1px solid #544a32;color:#f5efe2;border-radius:12px;padding:12px;font-family:inherit;width:100%;margin-bottom:10px}.x-ann-banner button{border:1px solid #75643c;background:#27261e;color:#f0dbad;border-radius:99px;padding:8px 14px;cursor:pointer;margin-top:8px}.x-avail{margin-top:8px}';st.textContent+='.x-chat{display:grid;gap:8px;margin:16px 0;max-height:50vh;overflow:auto}.x-msg{background:#22231d;border:1px solid #544a32;border-radius:14px;padding:10px 14px;color:#f5efe2}.x-msg small{display:block;color:#bbb09c;font-size:11px;margin-top:4px}.x-msg-mgr{border-color:#dcc17e}.x-chat-form{grid-template-columns:1fr auto;display:grid}';document.head.append(st);
 })();
