@@ -49,6 +49,31 @@ run("page='overview';render()");
 ok('handover textarea appears for open punch',String(nodes['#app'].innerHTML).includes('x-handover'));
 run("document.querySelector('#x-handover').value='الطابونة محتاجة تزويد';document.querySelector('#x-handover').oninput({target:{value:'الطابونة محتاجة تزويد'}})");
 run("globalThis.__captured=null;nodeApi=async(p,o)=>{globalThis.__captured={p,o};return {db,revision:1}}");
+// Announcements: nav, panel with ack, manager create form
+run("page='announcements';render()");
+const annHtml=String(nodes['#app'].innerHTML);
+ok('announcements page renders',annHtml.includes('الإعلانات'));
+run("db.announcements=[{id:'a1',title:'اجتماع',body:'بكرة ١٠ الصبح',scope:{kind:'all'},createdById:5,createdBy:'الإدارة',createdAt:'2026-10-19T10:00:00.000Z'}];db.announcementAcks=[];page='overview';render()");
+ok('unacked announcement banner on overview',String(nodes['#app'].innerHTML).includes('إعلان جديد'));
+run("page='announcements';render()");
+ok('announcement listed with ack button',String(nodes['#app'].innerHTML).includes('data-ack'));
+run("nodeUser={role:'manager',id:2,full_name:'مدير',position:'كابتن',branch:'فرع فودافون'};page='announcements';render()");
+ok('manager sees announcement create form',String(nodes['#app'].innerHTML).includes('x-ann-new'));
+
+// Availability block on the shift-swap page (employee form, manager list)
+run("nodeUser={role:'employee',id:7,full_name:'كابتن تجريبي',position:'كابتن',branch:'فرع فودافون'};db.availabilities=[{id:'v1',employeeId:7,employeeName:'كابتن تجريبي',branch:'فرع فودافون',department:'التدريب',weekdays:[0,2],note:'الصبح بس',updatedAt:'2026-10-19T10:00:00.000Z'}];page='shift-swap';render()");
+const availHtml=String(nodes['#app'].innerHTML);
+ok('availability form renders on swap page',availHtml.includes('إتاحتي الأسبوعية')&&availHtml.includes('x-avail-save'));
+run("nodeUser={role:'manager',id:2,full_name:'مدير',position:'كابتن',branch:'فرع فودافون'};render()");
+ok('manager sees team availability list',String(nodes['#app'].innerHTML).includes('إتاحة الفريق')&&String(nodes['#app'].innerHTML).includes('الصبح بس'));
+
+// Documents panel for manager/admin
+run("db.documents=[{id:'d1',employeeId:7,employeeName:'كابتن تجريبي',branch:'فرع فودافون',department:'التدريب',type:'شهادة إسعافات أولية',expiry:'2026-11-15',note:'',createdAt:'2026-10-19T10:00:00.000Z',createdBy:'الإدارة'}];page='documents';render()");
+const docHtml=String(nodes['#app'].innerHTML);
+ok('documents panel renders with expiry state',docHtml.includes('وثائق وشهادات الفريق')&&docHtml.includes('شهادة إسعافات أولية')&&docHtml.includes('تنتهي خلال'));
+run("nodeUser={role:'employee',id:7,full_name:'كابتن تجريبي',position:'كابتن',branch:'فرع فودافون'};page='documents';render()");
+ok('employee cannot open documents panel',!String(nodes['#app'].innerHTML).includes('x-doc-new'));
+
 (async()=>{
  await vm.runInContext("nativeAction('punch_out',{coords:{latitude:29.96,longitude:32.55,accuracy:5}})",ctx);
  const captured=run("globalThis.__captured");

@@ -144,3 +144,74 @@ test('point objections: employee objects once, manager accepts (voids) or reject
  // voided point cannot be objected to again
  assert.throws(()=>employeeAction(db,emp,'point_object',{pointId:'pt1',reason:'ثالث'},t),/INVALID_STATE/);
 });
+
+test('announcements: targeting, scoping, ack once',()=>{
+ const {db,emp,emp2,mgr,otherBranch,admin}=seed();
+ // manager can post to own branch or own department only
+ employeeAction(db,mgr,'announcement_create',{kind:'branch',branch:'A',title:'تنبيه',body:'الاجتماع بكرة 10 الصبح'},t);
+ employeeAction(db,mgr,'announcement_create',{kind:'department',department:'التدريب',title:'تدريب',body:'فورم الجلسات الجديدة'},t);
+ assert.throws(()=>employeeAction(db,mgr,'announcement_create',{kind:'all',title:'x',body:'y'},t),/FORBIDDEN/);
+ assert.throws(()=>employeeAction(db,mgr,'announcement_create',{kind:'branch',branch:'B',title:'x',body:'y'},t),/FORBIDDEN/);
+ assert.throws(()=>employeeAction(db,mgr,'announcement_create',{kind:'department',department:'السيلز',title:'x',body:'y'},t),/FORBIDDEN/);
+ // admin can post to all and to a department in any branch
+ employeeAction(db,admin,'announcement_create',{kind:'all',title:'عام',body:'تحديث النظام الليلة'},t);
+ employeeAction(db,admin,'announcement_create',{kind:'department',branch:'B',department:'السيلز',title:'سيلز',body:'تارجت الشهر'},t);
+ // employee cannot post
+ assert.throws(()=>employeeAction(db,emp,'announcement_create',{kind:'branch',branch:'A',title:'x',body:'y'},t),/FORBIDDEN/);
+ // targeting: emp (كابتن, A) sees branch-A + dept-training-A + all; not sales-B
+ const empView=visibleWorkspace(db,emp);
+ assert.equal(empView.announcements.length,3);
+ const salesView=visibleWorkspace(db,otherBranch); // manager sales B
+ assert.deepEqual(salesView.announcements.map(a=>a.title).sort(),['سيلز','عام']);
+ // creator sees own announcements even if not targeted
+ const mgrView=visibleWorkspace(db,mgr);
+ assert.equal(mgrView.announcements.length,3);
+ // ack once
+ const target=empView.announcements[0];
+ employeeAction(db,emp,'announcement_ack',{id:target.id},t+1000);
+ assert.throws(()=>employeeAction(db,emp,'announcement_ack',{id:target.id},t+2000),/INVALID_STATE/);
+ // cannot ack an announcement not targeted to you
+ const salesAnn=db.announcements.find(a=>a.title==='سيلز');
+ assert.throws(()=>employeeAction(db,emp,'announcement_ack',{id:salesAnn.id},t),/FORBIDDEN/);
+ // ack visibility: creator (manager) sees acks on own announcements; employee sees own acks
+ assert.equal(visibleWorkspace(db,mgr).announcementAcks.filter(k=>k.announcementId===String(target.id)).length,target.createdById===2?1:0);
+ assert.equal(visibleWorkspace(db,emp).announcementAcks.length,1);
+ // invalid input
+ assert.throws(()=>employeeAction(db,admin,'announcement_create',{kind:'branch',branch:'X',title:'t',body:'b'},t),/INVALID_INPUT/);
+ assert.throws(()=>employeeAction(db,admin,'announcement_create',{kind:'all',title:'',body:'b'},t),/INVALID_INPUT/);
+});
+
+test('availability: upsert own, scoped visibility',()=>{
+ const {db,emp,emp2,mgr,otherBranch}=seed();
+ employeeAction(db,emp,'availability_set',{weekdays:[0,2,4],note:'متاح الصبح بس'},t);
+ assert.throws(()=>employeeAction(db,emp,'availability_set',{weekdays:[0,0]},t),/INVALID_INPUT/);
+ assert.throws(()=>employeeAction(db,emp,'availability_set',{weekdays:[7]},t),/INVALID_INPUT/);
+ assert.throws(()=>employeeAction(db,emp,'availability_set',{weekdays:'الأحد'},t),/INVALID_INPUT/);
+ employeeAction(db,emp,'availability_set',{weekdays:[1,3]},t+1000);
+ assert.equal(db.availabilities.length,1);
+ assert.deepEqual(db.availabilities[0].weekdays,[1,3]);
+ employeeAction(db,emp2,'availability_set',{weekdays:[6]},t);
+ assert.equal(visibleWorkspace(db,emp).availabilities.length,1);
+ assert.equal(visibleWorkspace(db,mgr).availabilities.length,2);
+ assert.equal(visibleWorkspace(db,otherBranch).availabilities.length,0);
+});
+
+test('documents: manager scope, expiry validation, remove',()=>{
+ const {db,emp,mgr,otherBranch,admin}=seed();
+ employeeAction(db,mgr,'doc_add',{employeeId:1,type:'شهادة إسعافات أولية',expiry:'2026-12-31',note:'تجديد سنوي'},t);
+ assert.equal(db.documents.length,1);
+ assert.throws(()=>employeeAction(db,mgr,'doc_add',{employeeId:4,type:'x',expiry:'2026-12-31'},t),/FORBIDDEN/);
+ assert.throws(()=>employeeAction(db,mgr,'doc_add',{employeeId:1,type:'x',expiry:'2026-13-01'},t),/INVALID_DATE/);
+ assert.throws(()=>employeeAction(db,mgr,'doc_add',{employeeId:1,type:'x',expiry:'2026-02-30'},t),/INVALID_DATE/);
+ assert.throws(()=>employeeAction(db,emp,'doc_add',{employeeId:1,type:'x',expiry:'2026-12-31'},t),/FORBIDDEN/);
+ // visibility: employee sees own, manager sees dept+branch, other branch sees none, admin all
+ assert.equal(visibleWorkspace(db,emp).documents.length,1);
+ assert.equal(visibleWorkspace(db,mgr).documents.length,1);
+ assert.equal(visibleWorkspace(db,otherBranch).documents.length,0);
+ assert.equal(visibleWorkspace(db,admin).documents.length,1);
+ // remove: other-branch manager cannot; owning-scope manager can
+ assert.throws(()=>employeeAction(db,otherBranch,'doc_remove',{id:db.documents[0].id},t),/FORBIDDEN/);
+ employeeAction(db,mgr,'doc_remove',{id:db.documents[0].id},t+1000);
+ assert.equal(db.documents.length,0);
+ assert.throws(()=>employeeAction(db,mgr,'doc_remove',{id:'nope'},t),/NOT_FOUND/);
+});
