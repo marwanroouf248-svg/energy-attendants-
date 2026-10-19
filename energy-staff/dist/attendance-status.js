@@ -20,5 +20,19 @@ var EnergyAttendance = (() => {
    return {...r,punch:p||null,late,earlyMinutes,openOverdue:!!p&&!p.out&&now>=r.end,status:p?(late?'late':'on_time'):now<r.start+grace?'upcoming':now>=r.end?'missing':'overdue'};
   });
  }
- return {instant,bounds,rows};
+ function staffStatus(person,shifts,punches,now=Date.now()){
+  const p=local(now),day=`${p.year}-${p.month}-${p.day}`,id=Number(person.id);
+  if(person.needsActivation)return {status:'بانتظار تفعيل الحساب',time:'—'};
+  const own=punches.filter(x=>Number(x.employeeId)===id&&Number.isFinite(Date.parse(x.in)));
+  const open=own.find(x=>!x.out&&Date.parse(x.in)<=now);
+  const today=own.filter(x=>{const t=local(x.in);return `${t.year}-${t.month}-${t.day}`===day});
+  const scheduled=rows(shifts,own,now).filter(r=>Number(r.s.employeeId)===id&&(r.s.day===day||(!r.invalid&&r.start<=now&&r.end>now)));
+  const punch=open||today.sort((a,b)=>Date.parse(b.in)-Date.parse(a.in))[0];
+  if(punch){const t=local(punch.in),matched=scheduled.find(r=>r.punch===punch);return {status:open?(matched?.late?'متأخر':'حاضر'):'انصرف',time:`${t.hour}:${t.minute}`};}
+  if(!scheduled.length)return {status:'لا يوجد شفت محدد',time:'—'};
+  const current=scheduled.find(r=>!r.invalid&&r.start<=now&&r.end>now);
+  const state=current?.status||scheduled[0].status;
+  return {status:({upcoming:'لم يبدأ الشفت',overdue:'لم يسجل حضور حتى الآن',missing:'انتهى الشفت دون حضور',invalid:'راجع موعد الشفت'})[state]||'راجع سجل الحضور',time:'—'};
+ }
+ return {instant,bounds,rows,staffStatus};
 })();

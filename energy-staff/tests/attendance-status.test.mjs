@@ -2,6 +2,21 @@ import test from 'node:test';import assert from 'node:assert/strict';import vm f
 import {emptyWorkspace,employeeAction,positions} from '../server/domain.mjs';
 const ctx=vm.createContext({Intl,Date});vm.runInContext(readFileSync(new URL('../dist/attendance-status.js',import.meta.url),'utf8'),ctx);const A=ctx.EnergyAttendance;
 const shift={id:'s',employeeId:1,branch:'A',day:'2026-10-18',start:'22:00',end:'06:00',graceMinutes:5};
+test('live staff status distinguishes activation, no schedule, future shift and actual attendance',()=>{
+ const person={id:1},now=A.instant('2026-10-18','12:00');
+ assert.equal(A.staffStatus({...person,needsActivation:true},[],[],now).status,'بانتظار تفعيل الحساب');
+ assert.equal(A.staffStatus(person,[],[],now).status,'لا يوجد شفت محدد');
+ assert.equal(A.staffStatus(person,[shift],[],now).status,'لم يبدأ الشفت');
+ const p={employeeId:1,branch:'A',in:new Date(A.instant('2026-10-18','09:00')).toISOString()};
+ assert.equal(A.staffStatus(person,[],[p],now).status,'حاضر');
+ assert.equal(A.staffStatus(person,[],[{...p,out:new Date(now).toISOString()}],now).status,'انصرف');
+ assert.equal(A.staffStatus(person,[],[{...p,employeeId:2}],now).status,'لا يوجد شفت محدد');
+});
+test('live status preserves overnight presence and rejects stale stored absence labels',()=>{
+ const now=A.instant('2026-10-19','01:00'),p={employeeId:1,branch:'A',in:new Date(A.instant('2026-10-18','22:10')).toISOString()};
+ assert.equal(A.staffStatus({id:1,status:'غائب'},[shift],[p],now).status,'متأخر');
+ assert.equal(A.staffStatus({id:1,status:'حاضر'},[],[{...p,out:new Date(now).toISOString()}],now).status,'لا يوجد شفت محدد');
+});
 test('overnight delay is measured across midnight and Cairo DST',()=>{const p={employeeId:1,branch:'A',in:'2026-10-18T21:10:00Z'},r=A.rows([shift],[p])[0];assert.equal(r.status,'late');assert.equal(r.late,125);assert.equal((A.bounds({...shift,day:'2026-10-29'}).end-A.bounds({...shift,day:'2026-10-29'}).start)/36e5,9)});
 test('schedule status separates future, overdue, missing and grace',()=>{const s={...shift,start:'09:00',end:'17:00'};for(const [time,status] of [['08:59','upcoming'],['09:06','overdue'],['17:01','missing']])assert.equal(A.rows([s],[],A.instant(s.day,time))[0].status,status);assert.equal(A.rows([s],[{employeeId:1,branch:'A',in:new Date(A.instant(s.day,'09:05')).toISOString()}])[0].status,'on_time');assert.equal(A.rows([{...s,day:'bad'}],[])[0].status,'invalid');assert.equal(A.rows([s],[{employeeId:1,branch:'B',in:new Date(A.instant(s.day,'09:05')).toISOString()}],A.instant(s.day,'17:01'))[0].status,'missing')});
 test('consecutive schedules cannot reuse a punch',()=>{const next={...shift,id:'next',day:'2026-10-19',start:'06:00',end:'14:00'},rows=A.rows([shift,next],[{employeeId:1,branch:'A',in:new Date(A.instant(next.day,'05:55')).toISOString()}]);assert.equal(rows.filter(r=>r.punch).length,1);assert.equal(rows[1].status,'on_time')});
