@@ -37,7 +37,10 @@ export function defaultAssessors(){return [
  {id:'asr-hesham',name:'دكتور محمد هشام',branch:'فرع فودافون',active:true,availability:{}},
  {id:'asr-laila',name:'دكتورة ليلى',branch:'فرع الرخاوي — سيدات',active:true,availability:{}},
  {id:'asr-hana',name:'دكتورة هنا',branch:'فرع الرخاوي — سيدات',active:true,availability:{}}]}
-export function seedAssessors(db){if(db.assessorsSeeded)return db;db.assessors=Array.isArray(db.assessors)?db.assessors:[];for(const a of defaultAssessors())if(!db.assessors.some(x=>normName(x.name)===normName(a.name)&&x.branch===a.branch))db.assessors.push({...a});db.assessorsSeeded=true;return db}
+const slotRange=(a,b)=>{const out=[];for(let m=a;m<b;m+=30)out.push(String(Math.floor(m/60)).padStart(2,'0')+':'+(m%60?'30':'00'));return out};
+const confirmedSchedules={'asr-yassin':{days:[0,2,4,5],from:21*60,to:22*60+30},'asr-hesham':{days:[6,1,3],from:19*60+30,to:23*60},'asr-laila':{days:[6,1,3],from:17*60,to:21*60},'asr-hana':{days:[0,2,4],from:12*60,to:16*60}};
+export function applyConfirmedAssessorSchedules(db){if(db.assessorScheduleV1)return db;for(const a of db.assessors||[]){const c=confirmedSchedules[a.id];if(!c||availabilityConfigured(a))continue;const slots=slotRange(c.from,c.to);a.availability={};for(const d of c.days)a.availability[String(d)]=[...slots]}db.assessorScheduleV1=true;return db}
+export function seedAssessors(db){if(db.assessorsSeeded)return applyConfirmedAssessorSchedules(db);db.assessors=Array.isArray(db.assessors)?db.assessors:[];for(const a of defaultAssessors())if(!db.assessors.some(x=>normName(x.name)===normName(a.name)&&x.branch===a.branch))db.assessors.push({...a});db.assessorsSeeded=true;return applyConfirmedAssessorSchedules(db)}
 export function linkAssessors(db){for(const a of db.assessors||[]){if(a.staffId)continue;const s=(db.staff||[]).find(s=>s.branch===a.branch&&s.position==='أسسمنت — دكتور علاج طبيعي'&&normName(s.name)===normName(a.name));if(s)a.staffId=Number(s.id)}return db}
 export function validSlotTime(t){return /^([01]\d|2[0-3]):(00|30)$/.test(t)}
 export function availabilityConfigured(a){return !!a&&Object.values(a.availability||{}).some(v=>Array.isArray(v)&&v.length)}

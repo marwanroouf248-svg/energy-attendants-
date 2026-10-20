@@ -1,7 +1,7 @@
 {
-  "active": false,
+  "active": true,
   "source": "Owner messages relayed 2026-10-20",
-  "note": "Draft only. Not loaded or bookable. Exact doctor identities, conflicting 12-8 clarification, period, and appointment duration await confirmation. Existing doctor records are unchanged.",
+  "note": "Confirmed by owner; applied as 30-minute slots by server/domain.mjs",
   "entries": [
     {
       "branch": "فرع فودافون",
