@@ -1,0 +1,70 @@
+/* Energy Staff — dark theme (light is the default design). Gold/black identity preserved. */
+.ux-switch{display:inline-flex;gap:8px;align-items:center;margin-inline-end:6px}
+.ux-switch button{width:37px;height:37px;border-radius:50%;display:grid;place-items:center;font-size:15px;font-weight:700;border:1px solid var(--line);background:#fff;color:#7a6a35;padding:0}
+.ux-switch button:hover{filter:brightness(.95)}
+.ux-switch.ux-floating{position:fixed;top:14px;inset-inline-end:16px;z-index:1000;margin:0}
+.ux-switch.ux-floating button{background:#202019;color:#e3c66f;border-color:#4a4226}
+html[data-theme="dark"]{--bg:#12120e;--ink:#ece7d8;--muted:#a79f88;--line:#36321f;--green:#d9b75f;--lime:#e8c66c}
+html[data-theme="dark"] body{background:var(--bg);color:var(--ink)}
+html[data-theme="dark"] aside{background:#131310;border-left-color:#343024}
+html[data-theme="dark"] header{background:#171712;border-bottom-color:#36321f}
+html[data-theme="dark"] button{background:#26251c;color:var(--ink)}
+html[data-theme="dark"] select,html[data-theme="dark"] input,html[data-theme="dark"] textarea{background:#1d1c15;border-color:#453f27;color:var(--ink)}
+html[data-theme="dark"] .card,html[data-theme="dark"] .stat{background:#1b1a14;border-color:#36321f}
+html[data-theme="dark"] .card-head{border-bottom-color:#2b2919}
+html[data-theme="dark"] .card-head h2{color:var(--ink)}
+html[data-theme="dark"] th{background:#201f17;color:#a79f88}
+html[data-theme="dark"] td{border-top-color:#2b2919;color:var(--ink)}
+html[data-theme="dark"] .breadcrumb b{color:#c9c2ab}
+html[data-theme="dark"] .label,html[data-theme="dark"] .stat small,html[data-theme="dark"] .person small,html[data-theme="dark"] .card-head small{color:#8f8870}
+html[data-theme="dark"] .stat{background:#1b1a14}
+html[data-theme="dark"] .stat-icon{background:#2b2817;color:#d9b75f}
+html[data-theme="dark"] .stat-top{color:#a79f88}
+html[data-theme="dark"] .avatar{background:#3a3420;outline-color:#4a4226;color:#e3c66f}
+html[data-theme="dark"] .demo{background:#2b2817;color:#cbb26a}
+html[data-theme="dark"] .badge{background:#2b2a18;color:#cbbf9a}
+html[data-theme="dark"] .badge.amber{background:#3a2f16;color:#e0b95e}
+html[data-theme="dark"] .badge.gray{background:#26251f;color:#98917c}
+html[data-theme="dark"] .request{border-bottom-color:#2b2919}
+html[data-theme="dark"] .request button{background:#2b2a18;color:#d9b75f}
+html[data-theme="dark"] .request button.reject{background:#3a211b;color:#e08f7a}
+html[data-theme="dark"] .activity{border-bottom-color:#2b2919}
+html[data-theme="dark"] .task{border-bottom-color:#2b2919}
+html[data-theme="dark"] .task.done span{color:#7d7660}
+html[data-theme="dark"] .bars{border-bottom-color:#2b2919}
+html[data-theme="dark"] .bar{background:#3d3820}
+html[data-theme="dark"] .bar.dark{background:#c9a94f}
+html[data-theme="dark"] .chart-key{color:#a79f88}
+html[data-theme="dark"] .chart-key b{color:#c9a94f}
+html[data-theme="dark"] .toolbar input{background:#1d1c15;border-color:#453f27;color:var(--ink)}
+html[data-theme="dark"] .empty{color:#8f8870}
+html[data-theme="dark"] dialog{background:#1d1c15;border-color:#453f27;color:var(--ink)}
+html[data-theme="dark"] label{color:#b5ad94}
+html[data-theme="dark"] label input,html[data-theme="dark"] label select,html[data-theme="dark"] label textarea{background:#161510;border-color:#453f27;color:var(--ink)}
+html[data-theme="dark"] .primary{background:linear-gradient(135deg,#e7c568,#b2842e);color:#211b0c}
+html[data-theme="dark"] footer{color:#7d7660}
+html[data-theme="dark"] .notice{background:#2e2a17;color:#cdb872}
+html[data-theme="dark"] .employee-hero{background:#201e13}
+html[data-theme="dark"] h1,html[data-theme="dark"] h2{color:var(--ink)}
+html[data-theme="dark"] p{color:var(--muted)}
+html[data-theme="dark"] .initial{background:#33301f;color:#d9c58a}
+html[data-theme="dark"] .welcome{background:#191913}
+html[data-theme="dark"] .nav-group-label{color:#756d55}
+html[data-theme="dark"] .server-note{background:#2a2614;border-color:#4d4426;color:#d0b96e}
+html[data-theme="dark"] .report-kpis>div{background:#262419;border-color:#453f27}
+html[data-theme="dark"] .coach-counter{background:#262419;border-color:#453f27;color:#cdb872}
+html[data-theme="dark"] .score-box.positive{color:#7fd695;background:#16271b}
+html[data-theme="dark"] .score-box.negative{color:#f0958a;background:#2e1713}
+html[data-theme="dark"] .entry-panel{background:#171712}
+html[data-theme="dark"] .entry-panel-main h2,html[data-theme="dark"] .entry-panel-main{color:var(--ink)}
+html[data-theme="dark"] .entry-form input,html[data-theme="dark"] .entry-form select{background:#1d1c15;border-color:#453f27;color:var(--ink)}
+html[data-theme="dark"] .entry-tabs{background:#262419}
+html[data-theme="dark"] .entry-tabs button{color:#a79f88}
+html[data-theme="dark"] .entry-tabs button.selected{color:#e3c66f}
+html[data-theme="dark"] .entry-status{background:#262419;border-color:#453f27;color:#cdb872}
+html[data-theme="dark"] .entry-local-note{border-color:#36321f;color:#8f8870}
+html[data-theme="dark"] .password-input button{background:#2b2817;color:#d9b75f}
+html[data-theme="dark"] .entry-footnote,html[data-theme="dark"] .entry-admin,html[data-theme="dark"] .entry-text-button{color:#a08b54}
+html[data-theme="dark"] .entry-preview-notice{background:#2e2a17;color:#cdb872}
+html[data-theme="dark"] .kiosk{background:#141510!important}
+html[data-theme="dark"] #toast{background:#e3c66f;color:#211b0c}
