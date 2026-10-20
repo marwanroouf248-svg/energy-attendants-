@@ -6,7 +6,7 @@ import {createStore} from './store.mjs';
 import {createConnection} from './connection.mjs';
 import {hashPassword,checkPassword,passwordValid,randomToken,digest,safeEqual,cookieSession,sessionCookie,requireCsrf,clientAddress} from './security.mjs';
 import {positions,text,email,phone,safeUser,emptyWorkspace,hydrateWorkspace,visibleWorkspace,employeeAction,linkLegacyStaff,kioskPunch,findStaffByPin} from './domain.mjs';
-const env=process.env,production=env.NODE_ENV==='production',origin=env.PUBLIC_ORIGIN||(production?'':'http://localhost:3000'),root=path.resolve(fileURLToPath(new URL('../dist/',import.meta.url)));
+const env=process.env,production=env.NODE_ENV==='production',origins=(env.PUBLIC_ORIGIN||(production?'':'http://localhost:3000')).split(',').map(o=>o.trim().replace(/\/+$/,'')).filter(Boolean),root=path.resolve(fileURLToPath(new URL('../dist/',import.meta.url)));
 let store;const database=createConnection(createStore,{onError:e=>console.error('Energy Staff: database connection unavailable:',e.code||'DATABASE_UNAVAILABLE')});
 const dummyHash=await hashPassword('Not-A-User-'+randomToken());
 const errorMessages={SHIFT_EXISTS:'يوجد شفت لهذا الموظف في نفس اليوم.',INVALID_DOCTOR:'اختر طبيبًا متاحًا في الفرع.',SLOT_BOOKED:'الموعد محجوز بالفعل.',PASSWORD_RULES:'كلمة المرور من ١٠ إلى ١٢٨ حرف، مع حروف وأرقام.',INVALID_INPUT:'راجع البيانات المطلوبة.',INVALID_EMAIL:'البريد الإلكتروني غير صحيح.',INVALID_PHONE:'رقم الهاتف غير صحيح.',CSRF:'حدّث الصفحة وحاول مرة أخرى.',ORIGIN:'مصدر الطلب غير مسموح.',LOGIN_FAILED:'البريد أو كلمة المرور غير صحيحين.',PENDING:'طلبك بانتظار موافقة الإدارة الأولى.',ACCOUNT_DISABLED:'الحساب غير متاح؛ راجع الإدارة.',FORBIDDEN:'الإجراء غير مسموح لحسابك.',AUTH_REQUIRED:'سجل دخولك أولًا.',RATE_LIMITED:'محاولات كثيرة؛ حاول مرة أخرى لاحقًا.',SETUP_REQUIRED:'إعداد الإدارة غير مكتمل.',INVALID_SETUP_TOKEN:'رمز إعداد الإدارة غير صحيح.',ALREADY_SETUP:'حساب الإدارة تم إعداده بالفعل.',CONFLICT:'في تحديثات أحدث من جهاز آخر. حدّث البيانات قبل الحفظ.',BRANCH_LOCATION_MISSING:'موقع الفرع لم يتم ضبطه بعد.',LOW_GPS_ACCURACY:'دقة الموقع غير كافية؛ فعّل الموقع الدقيق وأعد المحاولة.',OUTSIDE_80_METERS:'لا يمكن التسجيل خارج نطاق ٨٠ متر من الفرع.',ALREADY_CHECKED_IN:'تم تسجيل حضور بالفعل.',NO_OPEN_SHIFT:'لا يوجد حضور مفتوح.',BREAK_OPEN:'أنهِ البريك قبل تسجيل الانصراف.',BREAK_LIMIT:'وصلت لحد البريكات المسموح.',NO_OPEN_BREAK:'لا يوجد بريك مفتوح.',INVALID_STATE:'راجع ترتيب الحركة الحالية.',INVALID_DATE:'التاريخ غير صحيح.',DUPLICATE_PHONE:'رقم العميل مسجل بالفعل؛ راجع الإدارة.',DATABASE_NOT_CONFIGURED:'تعذر الاتصال بقاعدة البيانات. حاول مرة أخرى بعد لحظات.',NOT_FOUND:'غير موجود.',KIOSK_FAILED:'بيانات غير صحيحة. راجع الفرع والرقم السري.',KIOSK_OFF:'كشك البصمة غير مفعّل حاليًا. راجع الإدارة.',PIN_RULES:'الرقم السري من ٤ لـ ٨ أرقام.',PIN_TAKEN:'الرقم السري ده مستخدم لموظف تاني.',SWAP_CONFLICT:'لا يمكن تنفيذ التبديل: يوجد طلب معلق أو شفت متعارض في نفس اليوم.',OBJECTION_CONFLICT:'يوجد اعتراض معلق على هذه النقطة بالفعل.'};
@@ -27,12 +27,12 @@ export const server=http.createServer(async(req,res)=>{
  try{const url=new URL(req.url,'http://localhost');
  if(url.pathname.startsWith('/api/')){
   store??=await database.ready();
-  if(url.pathname==='/api/health')return json(res,200,{ready:!!store,storage:store?.kind||'mysql',hosting:'node',publicOriginConfigured:!!origin});
-  if(!store||!origin)fail('DATABASE_NOT_CONFIGURED',503);
+  if(url.pathname==='/api/health')return json(res,200,{ready:!!store,storage:store?.kind||'mysql',hosting:'node',publicOriginConfigured:origins.length>0});
+  if(!store||!origins.length)fail('DATABASE_NOT_CONFIGURED',503);
   if(req.method==='GET'&&url.pathname==='/api/registration-options'){const w=await workspace();return json(res,200,{positions:Object.keys(positions),branches:w.db.branches.map(b=>b.name)})}
   if(req.method==='POST'&&url.pathname==='/api/kiosk/punch'){
    await limited(req,'kiosk',10,15);
-   if(origin&&req.headers.origin&&req.headers.origin!==origin)fail('ORIGIN',403);
+   if(origins.length&&req.headers.origin&&!origins.includes(req.headers.origin))fail('ORIGIN',403);
    const data=await body(req),direction=String(data.direction||''),pin=String(data.pin||'');
    if(!['in','out'].includes(direction)||!/^\d{4,8}$/.test(pin))fail('KIOSK_FAILED');
    const result=await store.transaction(async tx=>{const current=await workspace(tx,true);if(!current.db.rules.kioskEnabled)fail('KIOSK_OFF',403);const branch=text(data.branch,120);if(!current.db.branches.some(b=>b.name===branch))fail('KIOSK_FAILED');const staff=findStaffByPin(current.db,branch,pin);if(!staff)fail('KIOSK_FAILED');kioskPunch(current.db,staff,direction);await saveWorkspace(tx,current.db,current.revision);return {name:staff.name,direction}});
@@ -41,7 +41,7 @@ export const server=http.createServer(async(req,res)=>{
   }
   const s=await session(req);
   if(req.method==='GET'&&url.pathname==='/api/session'){const csrf=s?.csrf||await issueSession(res);const admins=await store.q('SELECT id FROM es_users WHERE role=\'admin\' LIMIT 1');return json(res,200,{csrf,user:s?.user?safeUser(s.user):null,needsSetup:admins.length===0})}
-  if(!['GET','HEAD'].includes(req.method))requireCsrf(req,s,origin);
+  if(!['GET','HEAD'].includes(req.method))requireCsrf(req,s,origins);
   if(req.method==='POST'&&url.pathname==='/api/register'){await limited(req,'register',8,60);const data=await body(req),d=validateRegistration(data);const w=await workspace();if(!w.db.branches.some(b=>b.name===d.branch))fail('INVALID_INPUT');if(!passwordValid(data.password))fail('PASSWORD_RULES');const passwordHash=await hashPassword(data.password);try{await store.q('INSERT INTO es_users(email,full_name,phone,password_hash,requested_position,requested_branch) VALUES(?,?,?,?,?,?)',[d.email,d.name,d.phone,passwordHash,d.position,d.branch]);await audit(null,'registration_received')}catch(e){if(e.code!=='ER_DUP_ENTRY')throw e}return json(res,201,{ok:true,message:'تم استقبال طلب التسجيل. انتظر مراجعة الإدارة.'})}
   if(req.method==='POST'&&url.pathname==='/api/login'){const data=await body(req),e=email(data.email);await limited(req,'login:'+e,12,15);const users=await store.q('SELECT * FROM es_users WHERE email=?',[e]);const u=users[0];const valid=await checkPassword(data.password,u?.password_hash||dummyHash);if(!u||!valid)fail('LOGIN_FAILED',401);if(u.status==='pending')fail('PENDING',403);if(u.status!=='approved')fail('ACCOUNT_DISABLED',403);const csrf=await issueSession(res,Number(u.id),s);await audit(Number(u.id),'login');return json(res,200,{csrf,user:safeUser(u)})}
   if(req.method==='POST'&&url.pathname==='/api/password'){
