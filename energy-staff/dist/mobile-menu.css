@@ -18,3 +18,4 @@
  html[data-theme="light"] #mobileMenuPanel nav button.active{background:#f0e6c9;color:#71551b}
  html[data-theme="light"] #mobileMenuPanel .header-actions button{background:#f0e6c9;color:#71551b}
 }
+@media(max-width:760px){#mobileMenuPanel nav .nav-group-label{display:block}#mobileMenuPanel .header-actions{position:sticky;bottom:0;background:inherit;padding:12px 0;margin-top:12px}#mobileMenuPanel .header-actions .avatar{display:none}}

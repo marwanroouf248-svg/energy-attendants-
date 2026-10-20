@@ -72,3 +72,10 @@ html[data-theme="dark"] #toast{background:#e3c66f;color:#211b0c}
 body.entry-mode .entry-panel-top{padding-top:52px}
 html[data-theme="dark"] body.entry-mode{background:#12120e}
 @media(max-width:760px){.request{flex-wrap:wrap}.request .details{min-width:150px}.header-actions{gap:6px}.ux-switch{gap:4px}}
+#title [translate="no"]{color:inherit}
+.employee-welcome button{background:#d8b45c;color:#211b0c}
+@media(max-width:760px){.employee-day-stats{grid-template-columns:1fr!important}.employee-day-stats>div{padding:14px}.employee-welcome{padding:20px}}
+html[data-theme="dark"] .modal-top{background:#1d1c15;color:#ece7d8}
+html[data-theme="dark"] .modal-top h2{color:#ece7d8}
+html[data-theme="dark"] .entry-flow-hint,html[data-theme="dark"] .entry-panel footer{border-color:#36321f}
+html[data-theme="dark"] .entry-submit{background:linear-gradient(135deg,#e9cc80,#b98d32);color:#271f0b}
