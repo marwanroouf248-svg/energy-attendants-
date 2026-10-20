@@ -24,3 +24,5 @@ Object.assign(window.I18N_EN, {
 'المواعيد غير محددة بعد':'Schedule not set yet',
 'تغيير مواعيد الرخاوي':'Change Rakhawy schedule'
 });
+
+Object.assign(window.I18N_EN, {'↓ تصدير نسخة بيانات':'↓ Export data copy','تم تصدير نسخة البيانات. احفظها بأمان.':'Data copy exported. Store it securely.'});

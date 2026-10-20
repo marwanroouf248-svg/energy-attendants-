@@ -1,0 +1,5 @@
+// Admin-only private workspace export. Never includes credentials or sessions.
+(function(){
+ const before=render;
+ render=function(){before();if(typeof nodeUser==='undefined'||nodeUser?.role!=='admin'||!previewSession)return;const actions=document.querySelector('.header-actions');if(!actions||document.getElementById('backupExport'))return;const b=document.createElement('button');b.id='backupExport';b.type='button';b.textContent='↓ تصدير نسخة بيانات';b.onclick=async()=>{if(!confirm('الملف يحتوي على بيانات خاصة بالموظفين والعملاء. احفظه في مكان آمن ولا ترسله لغير المصرح لهم. هذه نسخة بيانات فقط، لا تشمل كلمات المرور أو الجلسات ولا تستبدل النسخة الكاملة من قاعدة البيانات. متابعة؟'))return;b.disabled=true;try{const data=await nodeApi('backup/export');const file=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),url=URL.createObjectURL(file),a=document.createElement('a');a.href=url;a.download='energy-staff-data-'+new Date().toISOString().replace(/[:.]/g,'-')+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),10000);toast('تم تصدير نسخة البيانات. احفظها بأمان.')}catch(e){toast(e.message)}finally{b.disabled=false}};actions.append(b)};
+})();

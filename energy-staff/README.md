@@ -30,6 +30,10 @@
 - After verification, change only the stuff.energyclubegypt.com DNS record. Keep Vercel and its environment unchanged for rollback.
 - Git auto-deployment should track only energy-staff-hostinger, root energy-staff/. Confirm it is enabled and a test deployment succeeds before claiming it works. An uploaded zip alone is manual deployment.
 
+### Admin data export
+
+The admin header has a private JSON data-copy export. It includes the workspace and revision, but excludes password/secret/token fields, PIN hashes and sessions. It is not a full database backup and there is no automatic restore/import. Download only on a private device and store securely.
+
 ### Backups and rollback
 
 Git stores source code, not employee data or secrets. Hostinger website backups do not by themselves back up the external Supabase database. Verify Supabase's actual backup retention and restore path before promising recovery. A database backup/export must be kept privately and a restore tested separately. Do not restore over production to test it. Store deployment secrets in the vault, not Git. Keep Vercel available as a runtime rollback while both runtimes use the same database; switching hosting back does not undo database changes.
