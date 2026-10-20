@@ -1,7 +1,7 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 process.env.NODE_ENV='test';process.env.PUBLIC_ORIGIN='http://localhost:3000';process.env.INITIAL_ADMIN_EMAIL='owner@example.test';process.env.ADMIN_SETUP_TOKEN='test-setup-token-'.repeat(3);
 const {server,injectTestStore}=await import('../server/index.mjs');
-const users=[],sessions=new Map(),limits=new Map(),states=new Map([['workspace',{payload:JSON.stringify({branches:[{name:'A',lat:null,lng:null}],staff:[{id:-1,name:'Legacy',email:'legacy@example.test',legacyProfileId:'legacy-test',needsActivation:true,branch:'A',position:'كابتن',department:'التدريب'}],dailyAssignments:[{id:'legacy-duty',employeeId:-1,title:'Legacy task',day:'2026-10-18',status:'assigned'}]}),revision:0}],['bootstrap',{payload:'{}',revision:0}]]);
+const audits=[];const users=[],sessions=new Map(),limits=new Map(),states=new Map([['workspace',{payload:JSON.stringify({branches:[{name:'A',lat:null,lng:null}],staff:[{id:-1,name:'Legacy',email:'legacy@example.test',legacyProfileId:'legacy-test',needsActivation:true,branch:'A',position:'كابتن',department:'التدريب'}],dailyAssignments:[{id:'legacy-duty',employeeId:-1,title:'Legacy task',day:'2026-10-18',status:'assigned'}]}),revision:0}],['bootstrap',{payload:'{}',revision:0}]]);
 const fake={async q(sql,p=[]){
  if(sql.startsWith('SELECT payload,revision FROM es_state'))return [states.get('workspace')];
  if(sql.startsWith('UPDATE es_state SET payload=')){const row=states.get('workspace');if(row.revision!==p[1])return {affectedRows:0};row.payload=p[0];row.revision++;return {affectedRows:1}}
@@ -17,8 +17,8 @@ const fake={async q(sql,p=[]){
  if(sql.startsWith('SELECT id FROM es_users WHERE email'))return users.filter(u=>u.email===p[0]).map(u=>({id:u.id}));
  if(sql.startsWith('SELECT state_key FROM es_state'))return [{state_key:'bootstrap'}];
  if(sql.startsWith('INSERT INTO es_users')){if(users.some(u=>u.email===p[0]))throw Object.assign(Error('duplicate'),{code:'ER_DUP_ENTRY'});const admin=sql.includes("'admin','approved'");const u={id:users.length+1,email:p[0],full_name:p[1],phone:admin?'':p[2],password_hash:admin?p[2]:p[3],requested_position:admin?'كابتن':p[4],requested_branch:admin?p[3]:p[5],role:admin?'admin':'employee',status:admin?'approved':'pending',position:admin?'كابتن':null,branch:admin?p[4]:null};users.push(u);return {insertId:u.id}}
- if(sql.startsWith('UPDATE es_users SET password_hash=')){const u=users.find(u=>u.id===Number(p[1])&&u.password_hash===p[2]);if(!u)return {affectedRows:0};u.password_hash=p[0];return {affectedRows:1}}
- if(sql.startsWith('INSERT INTO es_audit'))return {insertId:1};
+ if(sql.startsWith('UPDATE es_users SET password_hash=')){const u=users.find(u=>u.id===Number(p[1])&&(sql.includes("role<>")?u.role!=='admin':u.password_hash===p[2]));if(!u)return {affectedRows:0};u.password_hash=p[0];return {affectedRows:1}}
+ if(sql.startsWith('INSERT INTO es_audit')){audits.push(p);return {insertId:1}};
  if(sql.startsWith('SELECT id,email,full_name'))return users.map(u=>({...u}));
  if(sql.startsWith('UPDATE es_users SET status=')){const u=users.find(u=>u.id===Number(p[5])&&u.role!=='admin');if(!u)return {affectedRows:0};Object.assign(u,{status:p[0],position:p[1],branch:p[2],role:p[3],review_reason:p[4]});return {affectedRows:1}}
  if(sql.startsWith('DELETE FROM es_sessions WHERE user_id')){for(const [k,s]of sessions)if(s.user_id===p[0])sessions.delete(k);return {affectedRows:1}}
@@ -51,7 +51,17 @@ test('HTTP password registration, approval, CSRF and logout flow',async()=>{try{
  const again=await request('/api/session'),a={cookie:again.cookie,csrf:again.data.csrf};
  const oldLogin=await request('/api/login',{method:'POST',session:a,body:{email:payload.email,password:payload.password}});assert.equal(oldLogin.status,401);
  const newLogin=await request('/api/login',{method:'POST',session:a,body:{email:payload.email,password:'New-Employee-2026'}});assert.equal(newLogin.status,200);
- const current={cookie:changed.cookie,csrf:changed.data.csrf};const logout=await request('/api/logout',{method:'POST',session:current});assert.equal(logout.status,200);const after=await request('/api/members',{session:current});assert.equal(after.status,401);
+
+ const resetForbidden=await request('/api/members/1/password',{method:'POST',session:{cookie:newLogin.cookie,csrf:newLogin.data.csrf},body:{password:'Reset-Employee-2026'}});assert.equal(resetForbidden.status,403);
+ const weakReset=await request('/api/members/1/password',{method:'POST',session:o,body:{password:'short'}});assert.equal(weakReset.status,400);
+ const adminReset=await request('/api/members/'+users.find(u=>u.role==='admin').id+'/password',{method:'POST',session:o,body:{password:'Reset-Owner-2026'}});assert.equal(adminReset.status,403);
+ const reset=await request('/api/members/1/password',{method:'POST',session:o,body:{password:'Reset-Employee-2026'}});assert.equal(reset.status,200);assert(audits.some(a=>a[1]==='member_password_reset'&&a[2]===1));
+ assert.equal((await request('/api/session',{session:{cookie:newLogin.cookie,csrf:newLogin.data.csrf}})).data.user,null);
+ const resetSession=await request('/api/session'),rs={cookie:resetSession.cookie,csrf:resetSession.data.csrf};
+ assert.equal((await request('/api/login',{method:'POST',session:rs,body:{email:payload.email,password:'New-Employee-2026'}})).status,401);
+ const afterReset=await request('/api/login',{method:'POST',session:rs,body:{email:payload.email,password:'Reset-Employee-2026'}});assert.equal(afterReset.status,200);
+ const selfChangeAfterReset=await request('/api/password',{method:'POST',session:{cookie:afterReset.cookie,csrf:afterReset.data.csrf},body:{currentPassword:'Reset-Employee-2026',password:'Final-Employee-2026'}});assert.equal(selfChangeAfterReset.status,200);
+ const current={cookie:selfChangeAfterReset.cookie,csrf:selfChangeAfterReset.data.csrf};const logout=await request('/api/logout',{method:'POST',session:current});assert.equal(logout.status,200);const after=await request('/api/members',{session:current});assert.equal(after.status,401);
  assert.equal((await request('/.env')).status,404);
  }finally{server.closeAllConnections();await new Promise(r=>server.close(r))}});
 

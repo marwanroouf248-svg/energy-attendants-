@@ -1,0 +1,20 @@
+#mobileMenuToggle{display:none}
+@media(max-width:760px){
+ body:not(.entry-mode)>aside{position:relative;display:flex;flex-direction:row;align-items:center;justify-content:space-between;gap:12px;padding:15px 16px;z-index:40}
+ #mobileMenuToggle{display:block;background:#302a1b;color:#f0d17e;border:1px solid #66562e;font-size:24px;line-height:1;padding:10px 13px;flex-shrink:0}
+ #mobileMenuPanel{display:none;position:absolute;top:100%;inset-inline:0;background:#181711;color:#ece7d8;border:1px solid #51452a;box-shadow:0 12px 25px #0005;padding:12px;max-height:76vh;overflow-y:auto;z-index:50}
+ .mobile-menu-open #mobileMenuPanel{display:block}
+ #mobileMenuPanel nav{display:flex;flex-direction:column;overflow:visible;margin:0;gap:4px}
+ #mobileMenuPanel nav button{width:100%;white-space:normal;text-align:start;justify-content:flex-start;line-height:1.6;padding:12px 14px;color:#d8d0b8;background:transparent}
+ #mobileMenuPanel nav button.active{background:#39301d;color:#f0d17e}
+ #mobileMenuPanel .nav-group-label{padding:10px 14px;color:#c0a662}
+ #mobileMenuPanel .header-actions{display:flex;flex-wrap:wrap;align-items:center;border-top:1px solid #51452a;margin-top:12px;padding-top:12px;gap:8px}
+ #mobileMenuPanel .header-actions button{white-space:normal;color:#e1d8bc;background:#302a1b}
+ body:not(.entry-mode) main>header{height:auto;min-height:44px;padding:10px 16px}
+ #mobileMenuPanel .ux-switch{width:100%}
+ .brand span{font-size:17px!important}
+ html[data-theme="light"] #mobileMenuPanel{background:#fcfbf7;color:#25231e;border-color:#e2dccd}
+ html[data-theme="light"] #mobileMenuPanel nav button{color:#5c5138}
+ html[data-theme="light"] #mobileMenuPanel nav button.active{background:#f0e6c9;color:#71551b}
+ html[data-theme="light"] #mobileMenuPanel .header-actions button{background:#f0e6c9;color:#71551b}
+}

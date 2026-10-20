@@ -11,6 +11,7 @@ html[dir="ltr"] #wa-help{left:auto;right:16px}
 html[dir="ltr"] .report-brand img{float:left;margin-left:0;margin-right:15px}
 html[dir="ltr"] .password-input input{padding-right:11px;padding-left:62px}
 html[dir="ltr"] .password-input button{right:auto;left:5px}
-html[dir="ltr"] .entry-story{padding-left:0;padding-right:0}
+html[dir="ltr"] .entry-story,html[dir="ltr"] .entry-panel{direction:ltr}
+html[dir="ltr"] main.kiosk{margin:0}
 @media(max-width:1100px){html[dir="ltr"] main{margin-left:190px}}
 @media(max-width:760px){html[dir="ltr"] main{margin-left:0}}

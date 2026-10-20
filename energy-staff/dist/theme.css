@@ -68,3 +68,7 @@ html[data-theme="dark"] .entry-footnote,html[data-theme="dark"] .entry-admin,htm
 html[data-theme="dark"] .entry-preview-notice{background:#2e2a17;color:#cdb872}
 html[data-theme="dark"] .kiosk{background:#141510!important}
 html[data-theme="dark"] #toast{background:#e3c66f;color:#211b0c}
+
+body.entry-mode .entry-panel-top{padding-top:52px}
+html[data-theme="dark"] body.entry-mode{background:#12120e}
+@media(max-width:760px){.request{flex-wrap:wrap}.request .details{min-width:150px}.header-actions{gap:6px}.ux-switch{gap:4px}}
