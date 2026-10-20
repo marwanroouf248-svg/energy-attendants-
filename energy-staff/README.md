@@ -4,7 +4,7 @@
 
 - المشروع المستقل: `energy-staff-maro`، ومجلد الجذر `energy-staff`، وفرع التطبيق `energy-staff-hostinger`.
 - ملف `vercel.json` ينشر الواجهة ويمرر `/api/*` إلى نفس سيرفر الصلاحيات والحسابات، بدون سيرفر يستمع على منفذ داخل Vercel.
-- النسخة المنشورة تستخدم Postgres على Supabase عبر `DATABASE_URL` سري في إعدادات Vercel للإنتاج فقط، مع شهادة الجهة المصدرة والتحقق من اسم المضيف. يحتفظ MySQL بالدعم كخيار للاستضافة الأخرى عند غياب `DATABASE_URL`.
+- النسخة المنشورة تستخدم Postgres على Supabase عبر `DATABASE_URL` سري في إعدادات Vercel للإنتاج والمعاينة، مع شهادة الجهة المصدرة والتحقق من اسم المضيف. يحتفظ MySQL بالدعم كخيار للاستضافة الأخرى عند غياب `DATABASE_URL`.
 - جميع جداول النسخة المنشورة داخل مخطط `energy_staff_v3` الخاص، ولا تستخدم حسابات Supabase Auth القديمة. حساب قاعدة البيانات `energy_staff_runtime_v3` له صلاحيات الجداول الخاصة فقط، ولا يستخدم التطبيق مفتاح service_role.
 - `PUBLIC_ORIGIN` يساوي رابط التطبيق النهائي. لا تحفظ بيانات حقيقية في وضع المعاينة ولا تضع كلمات المرور أو روابط الاتصال في GitHub.
 - دون إعداد قاعدة البيانات تظل الواجهة معاينة، و`/api/health` يرجع `ready: false`.
@@ -20,16 +20,19 @@
 - التشغيل: `npm start`.
 - عند غياب قاعدة البيانات، الواجهة تعمل كمعاينة وتظل API معطلة برسالة واضحة؛ لا يتم تسجيل كلمات مرور محليًا.
 
-## إعداد Hostinger
+## Hostinger migration (existing production database)
 
-1. أنشئ Node.js Web App واربطه بفرع `energy-staff-hostinger` في GitHub. ملفات التطبيق داخل `energy-staff/` في ذلك الفرع؛ اختره مجلد الجذر للمشروع.
-2. إعدادات التثبيت `npm ci`، البناء `npm run build`، وأمر البداية `npm start`. السيرفر يستخدم PORT الذي يحدده الهوست.
-3. أنشئ قاعدة MySQL مخصصة لهذا التطبيق. الجداول تحمل بادئة `es_` وتُنشأ عند التشغيل الأول. لا تنقل جداول نظام الحضور القديم تلقائيًا.
-4. أضف متغيرات `.env.example` في إعدادات Hostinger. لا ترفع ملف أسرار إلى GitHub. `PUBLIC_ORIGIN` هو الدومين النهائي مع `https://` وبدون شرطة في النهاية. شغّل `NODE_ENV=production`.
-5. حدد `INITIAL_ADMIN_EMAIL` ببريد المالك، و`ADMIN_SETUP_TOKEN` بقيمة عشوائية ٣٢ حرفًا أو أكثر تحفظها كسر على Hostinger. لا يوجد حساب مدير أو كلمة مرور افتراضية.
-6. افتح الموقع واضغط «تهيئة حساب الإدارة للمرة الأولى»، ثم أدخل الرمز واختر كلمة المرور بنفسك. بعد نجاح الإعداد، احذف متغير `ADMIN_SETUP_TOKEN` من إعدادات الهوست وأعد التشغيل. التهيئة لا تعمل مجددًا بعد وجود مدير.
-7. جرّب تسجيل موظف تجريبي: ينتظر الموافقة، ثم تقبله الإدارة. تحقق من تسجيل الدخول، منع دخول الحساب الموقوف، جلسة الخروج، موقع الفرع، والمهام من جهاز آخر.
-8. بعد نجاح الاختبار، فعّل إعادة النشر التلقائي لفرع GitHub من إعدادات تطبيق Hostinger. GitHub يحفظ الكود فقط، وMySQL تحفظ بيانات الموظفين.
+- Runtime: Node.js 22.x; root `energy-staff/` when using Git, or zip this folder's contents at the archive root.
+- Install `npm ci`; build `npm run build`; entry `server/index.mjs`; output `dist`; run `npm start`. Use Hostinger's injected PORT.
+- Keep the existing Supabase PostgreSQL database and schema `energy_staff_v3`. Set the same DATABASE_URL securely in Hostinger. Never create a new MySQL database, run a bootstrap, reset passwords, or import demo staff for this migration.
+- Set NODE_ENV=production and PUBLIC_ORIGIN=https://stuff.energyclubegypt.com. Add a temporary test origin only if a real test URL is provided. Existing accounts need no INITIAL_ADMIN_EMAIL or ADMIN_SETUP_TOKEN setup.
+- Before DNS: verify health ready=true/storage=postgres, login and read-only key flows on the Hostinger runtime. Never use real attendance/payroll writes to test.
+- After verification, change only the stuff.energyclubegypt.com DNS record. Keep Vercel and its environment unchanged for rollback.
+- Git auto-deployment should track only energy-staff-hostinger, root energy-staff/. Confirm it is enabled and a test deployment succeeds before claiming it works. An uploaded zip alone is manual deployment.
+
+### Backups and rollback
+
+Git stores source code, not employee data or secrets. Hostinger website backups do not by themselves back up the external Supabase database. Verify Supabase's actual backup retention and restore path before promising recovery. A database backup/export must be kept privately and a restore tested separately. Do not restore over production to test it. Store deployment secrets in the vault, not Git. Keep Vercel available as a runtime rollback while both runtimes use the same database; switching hosting back does not undo database changes.
 
 ## البيانات والصلاحيات
 

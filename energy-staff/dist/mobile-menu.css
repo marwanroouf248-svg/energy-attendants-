@@ -19,3 +19,24 @@
  html[data-theme="light"] #mobileMenuPanel .header-actions button{background:#f0e6c9;color:#71551b}
 }
 @media(max-width:760px){#mobileMenuPanel nav .nav-group-label{display:block}#mobileMenuPanel .header-actions{position:sticky;bottom:0;background:inherit;padding:12px 0;margin-top:12px}#mobileMenuPanel .header-actions .avatar{display:none}}
+/* Lightweight depth and motion: transform/opacity only, reduced-motion aware. */
+@media(max-width:760px){
+ #mobileMenuToggle{border-radius:15px;background:linear-gradient(145deg,#514122,#211d14);box-shadow:inset 0 1px 0 #ffe8a438,0 5px 14px #0003;transition:transform .18s,box-shadow .18s}
+ #mobileMenuToggle:active{transform:translateY(2px)}
+ .mobile-menu-open #mobileMenuToggle{box-shadow:inset 0 1px 0 #ffe8a438,0 0 20px #d6b35335}
+ #mobileMenuPanel{inset-inline:10px;top:calc(100% + 6px);border-radius:21px;background:radial-gradient(ellipse at 100% 0,#58442755,transparent 58%),linear-gradient(145deg,#242118,#12130f);box-shadow:inset 0 1px 0 #f4d58935,0 22px 45px #0006;transform-origin:top center}
+ .mobile-menu-open #mobileMenuPanel{animation:energyMenuIn .28s cubic-bezier(.2,.8,.2,1) both}
+ #mobileMenuPanel nav button{border-radius:12px;border:1px solid transparent;transition:background .15s,border-color .15s,transform .15s}
+ .mobile-menu-open #mobileMenuPanel nav button{animation:energyItemIn .22s ease-out both;animation-delay:var(--menu-delay,0ms)}
+ #mobileMenuPanel nav button.active{background:linear-gradient(110deg,#65502b,#332d1f);border-color:#a282464f;box-shadow:inset 0 1px 0 #f4d58925,0 4px 12px #0002}
+ #mobileMenuPanel nav button:active{transform:scale(.985)}
+ #mobileMenuPanel .header-actions{background:#191911;border-radius:14px;box-shadow:0 -8px 18px #16160f}
+ html[data-theme="light"] #mobileMenuToggle{background:linear-gradient(145deg,#fff7df,#e5d2a4);color:#6f5217;border-color:#c8ad70}
+ html[data-theme="light"] #mobileMenuPanel{background:radial-gradient(ellipse at 100% 0,#eddcb680,transparent 58%),#fffdf7;box-shadow:inset 0 1px 0 #fff,0 22px 45px #56431b28}
+ html[data-theme="light"] #mobileMenuPanel nav button.active{background:linear-gradient(110deg,#eddbad,#fbf1d9);border-color:#c7ac6b75}
+ html[data-theme="light"] #mobileMenuPanel .header-actions{background:#fffdf7;box-shadow:0 -8px 18px #fffdf7}
+}
+@keyframes energyMenuIn{from{opacity:0;transform:perspective(900px) rotateX(-5deg) translateY(-8px) scale(.98)}to{opacity:1;transform:none}}
+@keyframes energyItemIn{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){#mobileMenuToggle,#mobileMenuPanel,#mobileMenuPanel nav button{animation:none!important;transition:none!important}}
+@media(max-width:760px){#mobileMenuPanel nav button{font-size:14px;min-height:48px}#mobileMenuPanel nav{padding-bottom:10px}#mobileMenuPanel .header-actions{font-size:13px}}

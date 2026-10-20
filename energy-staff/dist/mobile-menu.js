@@ -2,9 +2,9 @@
 (function(){
 function setup(){
  const aside=document.querySelector('body>aside'),nav=document.querySelector('#nav');if(!aside||!nav)return;
- const button=document.createElement('button');button.id='mobileMenuToggle';button.type='button';button.textContent='☰';button.setAttribute('aria-label','القائمة');button.setAttribute('aria-expanded','false');
+ const button=document.createElement('button');button.id='mobileMenuToggle';button.type='button';button.textContent='☰';button.setAttribute('aria-label','القائمة');button.setAttribute('aria-expanded','false');button.setAttribute('aria-controls','mobileMenuPanel');
  const panel=document.createElement('div');panel.id='mobileMenuPanel';aside.append(button,panel);
- function setOpen(open){aside.classList.toggle('mobile-menu-open',open);button.setAttribute('aria-expanded',String(open))}
+ function setOpen(open){panel.querySelectorAll('nav button').forEach((el,i)=>el.style.setProperty('--menu-delay',Math.min(i*16,144)+'ms'));aside.classList.toggle('mobile-menu-open',open);button.setAttribute('aria-expanded',String(open))}
  button.onclick=()=>setOpen(!aside.classList.contains('mobile-menu-open'));
  panel.addEventListener('click',e=>{if(e.target.closest('button'))setOpen(false)});
  document.addEventListener('click',e=>{if(!aside.contains(e.target))setOpen(false)});

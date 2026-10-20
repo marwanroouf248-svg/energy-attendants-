@@ -1,11 +1,78 @@
 {
   "active": false,
   "source": "Owner messages relayed 2026-10-20",
-  "note": "Draft only. Not loaded into production or offered as bookable slots. Appointment duration is not supplied.",
+  "note": "Draft only. Not loaded or bookable. Exact doctor identities, conflicting 12-8 clarification, period, and appointment duration await confirmation. Existing doctor records are unchanged.",
   "entries": [
-    {"branch":"فرع فودافون","doctor":"محمد ياسين","weekdays":["الأحد","الثلاثاء","الخميس","الجمعة"],"start":"9:00","end":"10:30","period":null,"pending":["AM/PM","slot duration"]},
-    {"branch":null,"doctor":"محمد هشام","weekdays":["السبت","الاثنين","الأربعاء"],"start":"7:30","end":"11:00","period":null,"pending":["branch","AM/PM","slot duration"]},
-    {"branch":"فرع الرخاوي / السيدات","doctor":null,"weekdays":["السبت","الاثنين","الأربعاء"],"start24":"17:00","end24":"21:00","period":"evening","pending":["doctor identity","slot duration"]},
-    {"branch":null,"doctor":null,"weekdays":["الأحد","الثلاثاء","الخميس"],"start":"12:00","end":"4:00","period":null,"pending":["branch","doctor identity","AM/PM","slot duration"],"note":"Owner corrected end time from 5 to 4; هنا is not treated as a doctor name."}
+    {
+      "branch": "فرع فودافون",
+      "doctor": "محمد ياسين",
+      "weekdays": [
+        "الأحد",
+        "الثلاثاء",
+        "الخميس",
+        "الجمعة"
+      ],
+      "start": "9:00",
+      "end": "10:30",
+      "period": null,
+      "pending": [
+        "confirm PM for both doctors",
+        "slot duration"
+      ]
+    },
+    {
+      "branch": "فرع فودافون",
+      "doctor": "محمد هشام",
+      "weekdays": [
+        "السبت",
+        "الاثنين",
+        "الأربعاء"
+      ],
+      "start": "7:30",
+      "end": "11:00",
+      "period": null,
+      "pending": [
+        "resolve 12-8 clarification",
+        "confirm PM",
+        "slot duration"
+      ]
+    },
+    {
+      "branch": "فرع الرخاوي / السيدات",
+      "doctor": null,
+      "weekdays": [
+        "السبت",
+        "الاثنين",
+        "الأربعاء"
+      ],
+      "start24": "17:00",
+      "end24": "21:00",
+      "period": "evening",
+      "pending": [
+        "doctor identity",
+        "slot duration"
+      ],
+      "candidateDoctor": "ليلى (unconfirmed)"
+    },
+    {
+      "branch": null,
+      "doctor": null,
+      "weekdays": [
+        "الأحد",
+        "الثلاثاء",
+        "الخميس"
+      ],
+      "start": "12:00",
+      "end": "4:00",
+      "period": null,
+      "pending": [
+        "branch",
+        "doctor identity",
+        "AM/PM",
+        "slot duration"
+      ],
+      "note": "Owner corrected 5 to 4. Hana identity and exact date/time interpretation unconfirmed.",
+      "candidateDoctor": "هنا (unconfirmed)"
+    }
   ]
 }
