@@ -25,7 +25,7 @@ function dialog(title,fields,submit){
 
 function nav(){
  const bar=document.querySelector('#nav');
- if(!bar||!loggedIn()||bar.dataset.extrasAdded)return;bar.dataset.extrasAdded='1';
+ if(!bar||!loggedIn())return;if(bar.querySelector('[data-extras]'))return;
  const add=(key,label)=>{const b=document.createElement('button');b.dataset.extras='1';b.textContent=label;b.onclick=()=>{page=key;render()};bar.append(b)};
  add('announcements','📢 الإعلانات');
  add('faults','⚒ بلاغات الأعطال');
