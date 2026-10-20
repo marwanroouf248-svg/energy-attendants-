@@ -34,8 +34,14 @@ function mountSwitcher(){
   tBtn.onclick=()=>{const cur=(localStorage.getItem('es-theme')||'light')==='dark'?'light':'dark';localStorage.setItem('es-theme',cur);html.setAttribute('data-theme',cur);paint()};
   lBtn.onclick=()=>{localStorage.setItem('es-lang',lang==='en'?'ar':'en');location.reload()};
   wrap.append(tBtn,lBtn);paint();
-  const host=document.querySelector('.header-actions');
-  if(host)host.prepend(wrap);else{wrap.classList.add('ux-floating');document.body.append(wrap)}
+  function place(){
+    const inEntry=document.body.classList.contains('entry-mode');
+    const host=document.querySelector('.header-actions');
+    if(inEntry||!host){wrap.classList.add('ux-floating');if(wrap.parentElement!==document.body)document.body.append(wrap)}
+    else{wrap.classList.remove('ux-floating');if(wrap.parentElement!==host)host.prepend(wrap)}
+  }
+  place();
+  new MutationObserver(place).observe(document.body,{attributes:true,attributeFilter:['class']});
 }
 document.addEventListener('DOMContentLoaded',()=>{
   translateAll(document.body);
