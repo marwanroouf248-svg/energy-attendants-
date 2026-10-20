@@ -18,7 +18,7 @@ run("db.branches=[{name:'فرع فودافون',lat:null,lng:null},{name:'فرع
 run("db.staff.push({id:101,name:'دكتور فودافون',position:'أسسمنت — دكتور علاج طبيعي',branch:'فرع فودافون',department:'الأسسمنت والعلاج الطبيعي'},{id:102,name:'دكتور الرخاوي',position:'أسسمنت — دكتور علاج طبيعي',branch:'فرع الرخاوي',department:'الأسسمنت والعلاج الطبيعي'})");
 run("nodeUser={role:'admin',id:1,full_name:'Owner',position:'كابتن',branch:'فرع فودافون'};previewSession={kind:'admin',employeeId:1};page='assessment';render()");
 const addBtn=(nodes['#assess-new'].children||[])[0];assert(addBtn,'booking button rendered');addBtn.onclick();
-const branchSel=nodes['#fields [name=branch]'],docSel=nodes['#fields [name=doctorId]'];
+const branchSel=nodes['#fields [name=branch]'],docSel=nodes['#fields [name=doctor]'];
 branchSel.value='فرع فودافون';branchSel.onchange();
 ok('Vodafone doctor listed for Vodafone',String(docSel.innerHTML).includes('دكتور فودافون')&&!String(docSel.innerHTML).includes('دكتور الرخاوي'));
 branchSel.value='فرع الرخاوي';branchSel.onchange();
@@ -27,4 +27,15 @@ ok('Rakhawy doctor listed after switching branch',rakhawy.includes('دكتور �
 ok('Vodafone doctor removed after switching branch',!rakhawy.includes('دكتور فودافون'));
 branchSel.value='فرع بلا دكتور';branchSel.onchange();
 ok('branch without doctors shows an explicit empty state',String(docSel.innerHTML).includes('لا يوجد دكتور معتمد'));
+
+// Assessors list (managed by admin) is the primary doctor source
+run("db.assessors=[{id:'asr-1',name:'دكتورة القائمة',branch:'فرع الرخاوي',active:true,availability:{}}]");
+branchSel.value='فرع الرخاوي';branchSel.onchange();
+ok('managed assessor listed for her branch',String(docSel.innerHTML).includes('دكتورة القائمة'));
+branchSel.value='فرع فودافون';branchSel.onchange();
+ok('managed assessor not leaked to other branch',!String(docSel.innerHTML).includes('دكتورة القائمة'));
+ok('staff doctor still listed via fallback',String(docSel.innerHTML).includes('دكتور فودافون'));
+run("db.assessors=[{id:'asr-2',name:'دكتور موقوف',branch:'فرع فودافون',active:false,availability:{}}]");
+branchSel.value='فرع فودافون';branchSel.onchange();
+ok('deactivated assessor hidden',!String(docSel.innerHTML).includes('دكتور موقوف'));
 console.log('PASS:',count,'branch filter and assessment doctor-list regression checks');
