@@ -1,0 +1,28 @@
+// Access-matrix regression checks: department-aware page sets from dist/team.js
+const fs=require('fs'),vm=require('vm'),assert=require('assert');
+const src=fs.readFileSync('dist/team.js','utf8');
+const block=src.match(/const EMPLOYEE_DEPT_PAGES[\s\S]*?const managerPageSet=[^\n]*/);
+assert(block,'page-set block not found in team.js');
+const ctx={};vm.createContext(ctx);vm.runInContext(block[0]+';__exp={employeePageSet,managerPageSet}',ctx);
+const {employeePageSet,managerPageSet}=ctx.__exp;let count=0;const ok=(a,b,m)=>{assert.deepStrictEqual(a,b,m);count++};
+ok(managerPageSet('السيلز').includes('sales-dashboard'),true,'sales manager sees sales dashboard');
+ok(managerPageSet('السيلز').includes('coach-log'),false,'sales manager no coach log');
+ok(managerPageSet('التدريب').includes('coach-log'),true,'training supervisor sees coach log');
+ok(managerPageSet('التدريب').includes('sales-work'),false,'training supervisor no sales');
+ok(managerPageSet('الجودة').includes('score'),true,'quality manager sees score');
+ok(managerPageSet('الجودة').includes('payroll'),false,'quality manager no payroll');
+ok(managerPageSet('الموارد البشرية').includes('staff'),true,'HR manager sees staff');
+ok(managerPageSet('الموارد البشرية').includes('requests'),true,'HR manager sees requests');
+ok(managerPageSet('الموارد البشرية').includes('payroll'),false,'HR manager no payroll');
+ok(managerPageSet('التدريب').includes('payroll'),false,'training manager no payroll');
+ok(managerPageSet('السيلز').includes('payroll'),false,'sales manager no payroll');
+ok(employeePageSet('السيلز').includes('sales-calls'),true,'sales employee sees call log');
+ok(employeePageSet('التدريب').includes('sales-work'),false,'coach no sales pages');
+ok(employeePageSet('التدريب').includes('coach-log'),true,'coach sees coach log');
+ok(employeePageSet('الجودة').includes('records'),false,'quality employee least privilege');
+ok(employeePageSet('الموارد البشرية').includes('staff'),false,'HR employee no staff page');
+ok(employeePageSet('السيلز').includes('payroll'),false,'sales employee no payroll');
+ok(employeePageSet('الجودة').includes('payroll'),false,'quality employee no payroll');
+ok(managerPageSet('الهاوس كيبنج').includes('records'),true,'housekeeping manager sees records');
+ok(managerPageSet('الهاوس كيبنج').includes('payroll'),false,'housekeeping manager no payroll');
+console.log('PASS:',count,'access-matrix checks: dept-aware manager/employee sets, payroll admin-only everywhere');

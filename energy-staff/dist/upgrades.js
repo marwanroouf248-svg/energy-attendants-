@@ -1,5 +1,5 @@
 /* Local preview workflows. Server authorization and shared storage remain required. */
-db.branches??=[...new Set(db.staff.map(s=>s.branch))].map(name=>({name,lat:null,lng:null}));db.punches??=[];db.audit??=[];db.adjustments??=[];db.archived??=[];db.branchPermissions??={};db.seenRequests??=[];
+db.branches??=[...new Set(db.staff.map(s=>s.branch))].map(name=>({name,lat:null,lng:null}));db.punches??=[];db.audit??=[];db.adjustments??=[];db.attendanceOpening??=[];db.archived??=[];db.branchPermissions??={};db.seenRequests??=[];
 navs.push(['locations','⌖','مواقع الفروع'],['records','≡','سجل الحضور الفعلي'],['audit','↺','سجل التعديلات'],['archive','▥','أرشيف الموظفين']);
 const baseRender=render;let selectedEmployee=db.staff[0]?.id,geoBusy=false;
 function audit(action){db.audit.push({at:new Date().toISOString(),action,actor:role});save()}

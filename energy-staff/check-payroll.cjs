@@ -15,3 +15,22 @@ run("db.payrollDrafts[payrollKey(2)]={...d,hourlyRate:'0'}");assert.throws(()=>r
 console.log('PASS:',count,'payroll checks: 3 formulas, target switch, paid breaks, Cairo boundary splits, exact cents, open/overlap blocking, frozen snapshots, reopen history and exports');
 for(const type of ['hr','quality','assessment']){assert.equal(run(`payrollCompute({...d,type:'${type}',hourlyRate:'50',privateTotal:'0',privateDraw:'0',employeeDraw:'0',bonus:'0',incentive:'0'},att).total`),500000)}
 console.log('PASS: HR, quality and assessment hourly payroll formulas');
+
+// Opening attendance balance (pre-app days)
+run("db.attendanceOpening=[{id:'o1',employeeId:1,employeeName:'أحمد',branch:'الشباب — فودافون',date:'2026-05-31',shifts:3,hoursPerShift:8,hours:24,reason:'حضور قبل التطبيق',createdBy:'admin@test',createdAt:'2026-05-20T00:00:00Z',history:[]}]");
+ok("attendanceHours(1,{from:'2026-05-31',to:'2026-05-31'}).hours",25);
+ok("attendanceHours(1,{from:'2026-05-31',to:'2026-05-31'}).openingShifts",3);
+ok("attendanceHours(1,{from:'2026-06-01',to:'2026-06-01'}).hours",6);
+run("const fp1=attendanceHours(1,{from:'2026-05-31',to:'2026-05-31'}).fingerprint;db.attendanceOpening[0].shifts=4;db.attendanceOpening[0].hours=32");
+ok("attendanceHours(1,{from:'2026-05-31',to:'2026-05-31'}).fingerprint!==fp1",true);
+run("db.attendanceOpening[0].shifts=3;db.attendanceOpening[0].hours=24");
+run("db.punches.length=0;db.payrollRuns.length=0;db.attendanceOpening=[{id:'o2',employeeId:2,employeeName:'سارة',branch:'فرع السيدات',date:'2026-06-01',shifts:2,hoursPerShift:6,hours:12,reason:'قبل التطبيق',createdBy:'admin@test',createdAt:'2026-06-01T00:00:00Z',history:[]}];payrollPeriod={from:'2026-06-01',to:'2026-06-01'};db.payrollDrafts[payrollKey(2)]={...d,type:'hr',hourlyRate:'50'}");
+run('closePayroll(2)');
+ok('closedPayroll(2).attendance.hours',12);
+ok('payrollCSVRows(closedPayroll(2)).some(r=>String(r[0]).includes("رصيد افتتاحي"))',true);
+ok('payslipHTML(closedPayroll(2),true).includes("رصيد افتتاحي إداري")',true);
+run("page='reports';reportFilter={from:'2026-06-01',to:'2026-06-01',employee:'',branch:''};render()");
+assert(nodes['#reportPaper'].innerHTML.includes('رصيد افتتاحي'));count++;
+run("page='manual';render()");
+assert(nodes['#app'].innerHTML.includes('رصيد الحضور الافتتاحي'));count++;
+console.log('PASS:',count,'total checks incl. opening balance: hours aggregation, period scoping, fingerprint, closing on opening-only, payslip/CSV/report/manual rendering');
