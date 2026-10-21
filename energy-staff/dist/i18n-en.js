@@ -26,3 +26,5 @@ Object.assign(window.I18N_EN, {
 });
 
 Object.assign(window.I18N_EN, {'↓ تصدير نسخة بيانات':'↓ Export data copy','تم تصدير نسخة البيانات. احفظها بأمان.':'Data copy exported. Store it securely.'});
+
+Object.assign(window.I18N_EN, {'الخطة':'Plan','الانتهاء':'Expiry date','الخطة / الباقة (اختياري)':'Plan / Package (optional)','تاريخ انتهاء الاشتراك (اختياري)':'Subscription expiry (optional)','ينتهي':'expires','مفقود':'Lost'});
