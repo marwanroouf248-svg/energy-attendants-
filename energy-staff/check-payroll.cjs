@@ -34,3 +34,21 @@ assert(nodes['#reportPaper'].innerHTML.includes('رصيد افتتاحي'));coun
 run("page='manual';render()");
 assert(nodes['#app'].innerHTML.includes('رصيد الحضور الافتتاحي'));count++;
 console.log('PASS:',count,'total checks incl. opening balance: hours aggregation, period scoping, fingerprint, closing on opening-only, payslip/CSV/report/manual rendering');
+
+// Manual closing lines (بنود يدوية): labels, mandatory reason, sign math, payslip/CSV/summary rendering
+run("globalThis.dl={type:'hr',hourlyRate:'50',privateTotal:'0',privateDraw:'0',employeeDraw:'0',bonus:'0',incentive:'0',targetBonus:'0',targetAchieved:false,notes:'',lines:[{label:'بدل إشراف',sign:'+',amount:'500',reason:'إشراف العيادة أسبوعين'},{label:'جزاء إداري',sign:'-',amount:'100',reason:'تأخير متكرر بقرار إداري'}]}");
+ok("payrollCompute(dl,att).total",540000);
+ok("payrollCompute(dl,att).linesAdd",50000);
+ok("payrollCompute(dl,att).linesSub",10000);
+ok("payrollCompute({...dl,lines:[]},att).total",500000);
+assert.throws(()=>run("payrollCompute({...dl,lines:[{label:'بدل إشراف',sign:'+',amount:'500',reason:''}]},att)"));count++;
+assert.throws(()=>run("payrollCompute({...dl,lines:[{label:'بند مش موجود',sign:'+',amount:'500',reason:'سبب'}]},att)"));count++;
+assert.throws(()=>run("payrollCompute({...dl,lines:[{label:'بدل إشراف',sign:'+',amount:'0',reason:'سبب'}]},att)"));count++;
+run("db.payrollRuns.length=0;db.attendanceOpening=[];db.punches=[{id:20,employeeId:3,name:'خالد',branch:'الشباب — فودافون',in:'2026-06-01T08:00:00Z',out:'2026-06-01T18:00:00Z'}];db.breaks=[];payrollPeriod={from:'2026-06-01',to:'2026-06-01'};db.payrollDrafts[payrollKey(3)]={...dl}");
+run('closePayroll(3)');
+ok('closedPayroll(3).calculation.total',90000);
+ok('payrollLineItems(closedPayroll(3)).some(r=>String(r[0]).includes("بدل إشراف"))',true);
+ok('payrollLineItems(closedPayroll(3)).some(r=>String(r[0]).includes("جزاء إداري"))',true);
+ok('payrollCSVRows(closedPayroll(3)).some(r=>String(r[0]).includes("إدراكات")||String(r[0]).includes("بدل إشراف"))',true);
+ok('payslipHTML(closedPayroll(3),true).includes("إشراف العيادة أسبوعين")',true);
+console.log('PASS:',count,'total checks incl. manual closing lines: presets, mandatory reason, sign math, close/payslip/CSV rendering');
