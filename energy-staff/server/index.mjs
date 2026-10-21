@@ -69,6 +69,19 @@ export const server=http.createServer(async(req,res)=>{
  if(data.status==='approved'&&data.legacyStaffId){const after=await workspace(tx);linkLegacyStaff(after.db,Number(data.legacyStaffId),id);await saveWorkspace(tx,after.db,current.revision);}
  if(data.status!=='approved')await tx.q('DELETE FROM es_sessions WHERE user_id=?',[id]);
  });await audit(Number(actor.id),'member_'+data.status,id,String(data.reason||'').slice(0,1000));return json(res,200,{ok:true})}
+  const mgrReq=url.pathname.match(/^\/api\/manager-requests\/([^/]+)\/review$/);
+  if(req.method==='POST'&&mgrReq){const actor=requireAdmin(s),data=await body(req),reqId=String(mgrReq[1]);if(typeof data.approved!=='boolean')fail('INVALID_INPUT');await store.transaction(async tx=>{
+   const current=await workspace(tx,true);
+   const r=(current.db.managerRequests||[]).find(r=>String(r.id)===reqId);if(!r)fail('NOT_FOUND',404);if(r.status!=='pending')fail('INVALID_STATE',409);
+   if(data.approved){const position=Object.keys(positions).find(k=>positions[k]===r.department);if(!position)fail('INVALID_INPUT');
+    const result=await tx.q("UPDATE es_users SET role='manager',position=?,branch=?,reviewed_at=UTC_TIMESTAMP() WHERE id=? AND status='approved' AND role='employee'",[position,r.branch,Number(r.employeeId)]);
+    if(!result.affectedRows)fail('NOT_FOUND',404);
+    await tx.q('DELETE FROM es_sessions WHERE user_id=?',[Number(r.employeeId)]);
+    r.status='approved'}
+   else{r.status='rejected';r.reviewNote=String(data.reason||'').slice(0,1000)}
+   r.reviewedAt=new Date().toISOString();r.reviewedBy=actor.full_name;
+   await saveWorkspace(tx,current.db,current.revision);
+  });await audit(Number(actor.id),'manager_role_'+(data.approved?'approved':'rejected'),null,String(data.reason||'').slice(0,1000));return json(res,200,{ok:true})}
   const reset=url.pathname.match(/^\/api\/members\/(\d+)\/password$/);
   if(req.method==='POST'&&reset){const actor=requireAdmin(s);await limited(req,'admin_resetpw',30,60);const data=await body(req),id=Number(reset[1]);if(id===Number(actor.id))fail('FORBIDDEN',403);if(!passwordValid(data.password))fail('PASSWORD_RULES');const hash=await hashPassword(data.password);await store.transaction(async tx=>{const result=await tx.q('UPDATE es_users SET password_hash=? WHERE id=? AND role<>\'admin\'',[hash,id]);if(!result.affectedRows)fail('NOT_FOUND',404);await tx.q('DELETE FROM es_sessions WHERE user_id=?',[id]);await tx.q('INSERT INTO es_audit(actor_id,action,subject_id,reason) VALUES(?,?,?,?)',[Number(actor.id),'member_password_reset',id,null]);});return json(res,200,{ok:true})}
   if(req.method==='GET'&&url.pathname==='/api/backup/export'){
