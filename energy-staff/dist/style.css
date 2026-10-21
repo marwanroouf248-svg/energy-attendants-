@@ -3,3 +3,4 @@
 
 nav button i svg{width:19px;height:19px;display:block;margin:auto}
 .stat-icon svg{width:22px;height:22px;display:block}
+button i svg, a i svg{width:1.05em;height:1.05em;display:inline-block;vertical-align:-0.18em;margin:auto}
