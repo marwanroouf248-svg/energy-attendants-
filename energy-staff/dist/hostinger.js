@@ -35,13 +35,31 @@ if(nodeUser){
  const ownAddPages=['accounts','branch-access','classes'];
  if(nodeUser.role==='admin'&&!ownAddPages.includes(page)){$('#add').hidden=false;$('#add').textContent='＋ تجهيز حساب موظف';$('#add').onclick=()=>{page='rollout-readiness';render()}}
  const tasksBtn=document.querySelector('#nav [data-page="tasks"]');if(tasksBtn)tasksBtn.hidden=true;
- if(page==='requests'){const rb=$('#requestNew');if(rb)rb.hidden=true}
+ if(page==='requests'&&(nodeUser.role==='admin'||nodeUser.role==='manager'))renderTeamRequests();
  if(page==='shifts'){$('#app').innerHTML='<div class="notice">تعيين الشفتات ومتابعتها بقوا من صفحة «جدول شفتات الموظفين». <button id="goShiftPlanner" class="primary">افتح جدول الشفتات ←</button></div>';$('#goShiftPlanner').onclick=()=>{page='shift-planner';render()}}
  if(page==='permissions'){$('#app').innerHTML='<div class="notice">إدارة الأكسس الفعلية: دور كل حساب (موظف / مدير قسم / إدارة) من صفحة «الحسابات والأكسس»، وفروع تسجيل الحضور لكل موظف من «أكسس حضور الفروع». الصفحة دي كانت معاينة قديمة — إعداداتها ما كانتش بتتطبق فعليًا — واتقفلت عشان متعملش لبس.</div>'}
 }
 if(page==='join-approvals'&&nodeUser.role==='admin'){$('#app').innerHTML=serverApprovals();$('#refreshMembers').onclick=()=>refreshServerMembers().catch(e=>toast(e.message));document.querySelectorAll('[data-native-review]').forEach(b=>b.onclick=()=>reviewServerAccount(Number(b.dataset.nativeReview)));document.querySelectorAll('[data-native-reset]').forEach(b=>b.onclick=()=>resetServerPassword(Number(b.dataset.nativeReset)))}};
 async function checkHostingerServer(){try{const response=await fetch('/api/health',{credentials:'same-origin',cache:'no-store'}),health=await response.json();nodeReady=!!health.ready;if(nodeReady){const s=await nodeApi('session');nodeCsrf=s.csrf;nodeNeedsSetup=s.needsSetup;const registration=await nodeApi('registration-options');db.branches=registration.branches.map(name=>({name,lat:null,lng:null}));if(s.user?.status==='approved'){nodeUser=s.user;await enterServerWorkspace();return}}}catch{nodeReady=false}finally{nodeChecked=true}if(!previewSession)entryView()}
 setInterval(async()=>{if(!nodeUser)return;try{const s=await nodeApi('session');if(!s.user||s.user.status!=='approved'){nodeUser=null;previewSession=null;entryMessage='الجلسة انتهت أو الحساب موقوف. سجل دخولك من جديد.';entryView()}}catch{}},60000);
+let reqFilter={status:'all',type:'all',q:''};
+function renderTeamRequests(){
+ const types=[...new Set((db.requests||[]).map(r=>r.type))];
+ const rows=(db.requests||[]).filter(r=>(reqFilter.status==='all'||r.status===reqFilter.status)&&(reqFilter.type==='all'||r.type===reqFilter.type)&&(!reqFilter.q||String(r.name).includes(reqFilter.q))).slice().reverse();
+ const rowHtml=rows.map(r=>`<div class="request"><div class="initial">${esc(String(r.name||'?')[0])}</div><div class="details"><strong>${esc(r.name)} <span style="color:#a2aaa4;font-weight:400">/ ${esc(r.type)}</span></strong><p>${esc(r.detail||'')}</p>${requestMeta(r)}${r.onBehalf?`<p class="muted">أنشأه ${esc(r.createdBy||'الإدارة')} نيابة عن الموظف</p>`:''}${r.reviewedBy?`<p class="muted">راجعه: ${esc(r.reviewedBy)}${r.reviewedAt?' — '+String(r.reviewedAt).slice(0,10):''}</p>`:''}</div>${r.status==='معلق'?`<button data-approve="${r.id}">✓</button><button class="reject" data-reject="${r.id}">✕</button>`:badge(r.status)}</div>`).join('')||'<div class="empty">مفيش طلبات مطابقة للفلتر الحالي.</div>';
+ $('#app').innerHTML=`<section class="card"><div class="card-head"><h2>طلبات الفريق</h2><button id="requestNew" class="primary">＋ إضافة طلب لموظف</button></div><div class="toolbar" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px"><select id="reqStatus"><option value="all">كل الحالات</option>${['معلق','مقبول','مرفوض'].map(s=>`<option ${reqFilter.status===s?'selected':''}>${s}</option>`).join('')}</select><select id="reqType"><option value="all">كل الأنواع</option>${types.map(t=>`<option ${reqFilter.type===t?'selected':''}>${esc(t)}</option>`).join('')}</select><input id="reqQ" type="search" placeholder="ابحث باسم الموظف…" value="${esc(reqFilter.q)}"><span class="muted">${rows.length} طلب</span></div><div id="reqRows">${rowHtml}</div></section>`;
+ $('#requestNew').onclick=requestForStaff;
+ $('#reqStatus').onchange=e=>{reqFilter.status=e.target.value;renderTeamRequests()};
+ $('#reqType').onchange=e=>{reqFilter.type=e.target.value;renderTeamRequests()};
+ $('#reqQ').oninput=e=>{reqFilter.q=e.target.value.trim();renderTeamRequests();const q=$('#reqQ');q.focus();q.setSelectionRange(q.value.length,q.value.length)};
+ document.querySelectorAll('[data-approve]').forEach(b=>b.onclick=()=>reviewRequest(b.dataset.approve,true));
+ document.querySelectorAll('[data-reject]').forEach(b=>b.onclick=()=>reviewRequest(b.dataset.reject,false));
+}
+function requestForStaff(){
+ const people=(db.staff||[]).filter(s=>!s.needsActivation).slice().sort((a,b)=>String(a.name).localeCompare(String(b.name),'ar'));
+ if(!people.length)return toast('مفيش موظفين متاحين في نطاقك');
+ safeSubmit('إضافة طلب لموظف','<label>الموظف<select name="employeeId" required>'+people.map(s=>`<option value="${s.id}">${esc(s.name)} — ${esc(s.position||s.job||'')}</option>`).join('')+'</select></label>'+options('نوع الطلب','type',['إجازة اعتيادية','إجازة مرضية','إذن انصراف مبكر','إذن تأخير وصول','إذن خروج وعودة أثناء الوردية','تصحيح بصمة','تبديل وردية'])+field('التفاصيل','detail')+'<label>اليوم (اختياري)<input name="day" type="date"></label><label>عدد الساعات (اختياري)<input name="hours" type="number" min="0.5" max="24" step="0.5"></label>',async f=>{await nativeAction('request_create_for',{employeeId:Number(f.get('employeeId')),type:f.get('type'),detail:f.get('detail'),day:f.get('day')||undefined,hours:f.get('hours')||undefined});toast('تم إضافة الطلب')});
+}
 render();checkHostingerServer();
 setInterval(()=>{if(!nodeReady&&!previewSession)checkHostingerServer()},15000);
 
