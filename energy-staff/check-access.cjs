@@ -24,5 +24,15 @@ ok(employeePageSet('الموارد البشرية').includes('staff'),false,'HR 
 ok(employeePageSet('السيلز').includes('payroll'),false,'sales employee no payroll');
 ok(employeePageSet('الجودة').includes('payroll'),false,'quality employee no payroll');
 ok(managerPageSet('الهاوس كيبنج').includes('records'),true,'housekeeping manager sees records');
+ok(managerPageSet('التدريب').includes('requests'),true,'training manager reviews requests');
+ok(managerPageSet('السيلز').includes('requests'),true,'sales manager reviews requests');
+ok(managerPageSet('الجودة').includes('requests'),true,'quality manager reviews requests');
+ok(managerPageSet('الهاوس كيبنج').includes('requests'),true,'housekeeping manager reviews requests');
+ok(managerPageSet('Move').includes('records'),true,'Move manager sees attendance records');
+ok(managerPageSet('Move').includes('breaks'),true,'Move manager sees breaks');
+ok(managerPageSet('Move').includes('requests'),true,'Move manager reviews requests');
+ok(managerPageSet('الأسسمنت والعلاج الطبيعي').includes('records'),true,'assessment manager sees records');
+ok(managerPageSet('Outdoor').includes('records'),true,'outdoor manager sees records');
+ok(managerPageSet('Move').includes('payroll'),false,'Move manager no payroll');
 ok(managerPageSet('الهاوس كيبنج').includes('payroll'),false,'housekeeping manager no payroll');
 console.log('PASS:',count,'access-matrix checks: dept-aware manager/employee sets, payroll admin-only everywhere');
