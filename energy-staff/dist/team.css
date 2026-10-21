@@ -4,3 +4,4 @@
 .employee-welcome h2{font-size:clamp(24px,3vw,34px);margin:10px 0}.employee-welcome p,.employee-welcome small{color:#bfb8aa}.employee-welcome>button{justify-self:start;border-color:#b99146;color:#e5c37f}
 .employee-day-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.employee-day-stats>div{padding:16px;border:1px solid #ffffff12;border-radius:14px;background:#ffffff04}.employee-day-stats strong{display:block;font-size:30px;color:#e5c37f}.employee-day-stats span{font-size:12px;color:#c4bcae}
 @media(max-width:560px){.employee-welcome{padding:18px}.employee-day-stats{gap:7px}.employee-day-stats>div{padding:12px 8px}.employee-day-stats strong{font-size:26px}}
+.lead-actions{display:flex;gap:8px;flex-wrap:wrap}.lead-assess{margin:2px 0;color:#c9bfa5;font-size:13px}

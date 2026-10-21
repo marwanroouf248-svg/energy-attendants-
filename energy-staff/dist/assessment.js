@@ -36,18 +36,20 @@ openForm(title,fields,()=>{});
 const form=document.querySelector('#form');
 form.onsubmit=async e=>{e.preventDefault();const b=form.querySelector('[type=submit]');b.disabled=true;try{await submit(new FormData(form));document.querySelector('#modal').close();toast('تم الحفظ بنجاح')}catch(e){toast(errMsg(e))}finally{b.disabled=false}};
 }
-function makeBooking(){
+function makeBooking(prefill){
+prefill=prefill||{};
 const branches=nodeUser.role==='admin'?db.branches.map(x=>x.name):[nodeUser.branch];
 const ds=assessorList().filter(x=>branches.includes(x.branch));
 if(!ds.length)return toast('لا يوجد دكتور أسسمنت معتمد في الفرع. راجع إدارة الدكاترة.');
 const opts=branches.map(x=>'<option value="'+h(x)+'">'+h(x)+'</option>').join('');
-dialog('حجز موعد أسسمنت','<label>الفرع<select required name="branch">'+opts+'</select></label><label>الدكتور<select required name="doctor"></select></label><label>التاريخ<input required type="date" name="day"></label><div id="slotBox"><p class="assess-hint">اختر الدكتور والتاريخ أولًا</p><input type="hidden" name="time" value=""></div><label>اسم العميل<input required maxlength="120" name="patientName"></label><label>رقم الهاتف<input required type="tel" name="phone"></label><label>ملاحظات الريسبشن<textarea name="receptionNotes" maxlength="1000"></textarea></label>',f=>{const doc=assessorList().find(x=>x.key===f.get('doctor'));const data={branch:f.get('branch'),day:f.get('day'),time:f.get('time'),patientName:f.get('patientName'),phone:f.get('phone'),receptionNotes:f.get('receptionNotes')};if(doc.assessorId)data.assessorId=doc.assessorId;else data.doctorId=doc.doctorId;return nativeAction('assessment_create',data)});
+dialog('حجز موعد أسسمنت','<label>الفرع<select required name="branch">'+opts+'</select></label><label>الدكتور<select required name="doctor"></select></label><label>التاريخ<input required type="date" name="day"></label><div id="slotBox"><p class="assess-hint">اختر الدكتور والتاريخ أولًا</p><input type="hidden" name="time" value=""></div><label>اسم العميل<input required maxlength="120" name="patientName" value="'+h(prefill.patientName||'')+'"></label><label>رقم الهاتف<input required type="tel" name="phone" value="'+h(prefill.phone||'')+'"></label><label>ملاحظات الريسبشن<textarea name="receptionNotes" maxlength="1000">'+h(prefill.receptionNotes||'')+'</textarea></label>'+(prefill.leadId?'<p class="assess-hint">الحجز مرتبط بعميل سيلز — حالة الموعد هتظهر في ملف العميل تلقائيًا.</p>':''),f=>{const doc=assessorList().find(x=>x.key===f.get('doctor'));const data={branch:f.get('branch'),day:f.get('day'),time:f.get('time'),patientName:f.get('patientName'),phone:f.get('phone'),receptionNotes:f.get('receptionNotes')};if(doc.assessorId)data.assessorId=doc.assessorId;else data.doctorId=doc.doctorId;if(prefill.leadId)data.leadId=prefill.leadId;return nativeAction('assessment_create',data)});
 const branch=document.querySelector('#fields [name=branch]'),docSel=document.querySelector('#fields [name=doctor]'),dayIn=document.querySelector('#fields [name=day]'),slotBox=document.querySelector('#slotBox');
 const syncDocs=()=>{const match=assessorList().filter(x=>x.branch===branch.value);docSel.innerHTML=match.length?match.map(x=>'<option value="'+h(x.key)+'">'+h(x.name)+'</option>').join(''):'<option value="" selected disabled>لا يوجد دكتور معتمد في هذا الفرع</option>'};
 const syncSlots=()=>{const doc=assessorList().find(x=>x.key===docSel.value);slotBox.innerHTML=doc&&dayIn.value?slotField(doc,dayIn.value):'<p class="assess-hint">اختر الدكتور والتاريخ أولًا</p><input type="hidden" name="time" value="">'};
 branch.onchange=()=>{syncDocs();syncSlots()};docSel.onchange=syncSlots;dayIn.onchange=syncSlots;
 syncDocs();syncSlots();
 }
+window.assessmentBookingForm=makeBooking;
 function postponeDialog(a){
 const doc=assessorList().find(x=>(a.assessorId&&x.assessorId===String(a.assessorId))||(x.staffId!=null&&Number(a.doctorId)===Number(x.staffId))||(x.doctorId!=null&&Number(a.doctorId)===Number(x.doctorId)));
 dialog('تأجيل موعد '+a.patientName,'<p>الموعد الحالي: <b>'+h(a.day)+' — '+h(a.time)+'</b> ('+h(a.doctorName)+')</p><label>التاريخ الجديد<input required type="date" name="day"></label><div id="slotBox2"><p class="assess-hint">اختر التاريخ الجديد أولًا</p><input type="hidden" name="time" value=""></div><p class="assess-hint">التأجيل يقفل الموعد القديم ويحرره، ويحجز الموعد الجديد — ومكالمة التأكيد تتعمل من جديد للمعاد الجديد.</p>',f=>nativeAction('assessment_postpone',{id:a.id,day:f.get('day'),time:f.get('time')}));
@@ -58,6 +60,7 @@ dayIn.onchange=sync;sync();
 async function toggleConfirm(a,done){
 try{await nativeAction('assessment_confirm',{id:a.id,done});toast(done?'تم تسجيل مكالمة التأكيد ✓':'تم إلغاء التأكيد')}catch(e){toast(errMsg(e))}
 }
+const linkedLead=a=>(a&&a.leadId)?(db.salesLeads||[]).find(l=>String(l.id)===String(a.leadId)):null;
 function detail(a){
 if(!a)return;const medical=canMedical(),booking=canBook();
 const editable=a.bookingStatus!=='postponed';
@@ -70,7 +73,7 @@ if(a.rescheduledFrom)extra+='<p class="assess-hint">هذا الموعد ناتج
 if(a.bookingStatus==='booked'&&booking){
 extra+='<div class="assess-actions"><button type="button" class="'+(a.confirmCall&&a.confirmCall.done?'':'primary')+'" id="confirmCallBtn">'+(a.confirmCall&&a.confirmCall.done?'↩ إلغاء مكالمة التأكيد ('+h(a.confirmCall.byName||'')+')':'✓ تمت مكالمة التأكيد مع العميل')+'</button><button type="button" id="postponeBtn">↷ تأجيل الموعد</button></div>';
 }else if(a.bookingStatus==='booked'&&a.confirmCall&&a.confirmCall.done){extra+='<p class="assess-hint">✓ تم تأكيد الموعد تليفونيًا بواسطة '+h(a.confirmCall.byName||'')+'</p>'}
-dialog('متابعة الأسسمنت','<p>'+h(a.patientName)+' — '+h(a.branch)+' — '+h(a.day)+' / '+h(a.time)+'</p><p>الدكتور: '+h(a.doctorName)+'</p><p>رقم الهاتف: '+h(a.phone)+'</p><p>ملاحظات الريسبشن: '+h(a.receptionNotes||'—')+'</p>'+extra+status+doctorFields,f=>nativeAction('assessment_update',{id:a.id,status:f.get('status')||a.bookingStatus,...(medical?{doctorNotes:f.get('doctorNotes'),injuryStatus:f.get('injuryStatus'),planDelivered:f.has('planDelivered')}:{})}));
+dialog('متابعة الأسسمنت','<p>'+h(a.patientName)+' — '+h(a.branch)+' — '+h(a.day)+' / '+h(a.time)+'</p><p>الدكتور: '+h(a.doctorName)+'</p><p>رقم الهاتف: '+h(a.phone)+'</p><p>ملاحظات الريسبشن: '+h(a.receptionNotes||'—')+'</p>'+(linkedLead(a)?'<p>عميل سيلز مرتبط: <b>'+h(linkedLead(a).name)+'</b> — مسؤول المتابعة: '+h(linkedLead(a).employeeName)+'</p>':'')+extra+status+doctorFields,f=>nativeAction('assessment_update',{id:a.id,status:f.get('status')||a.bookingStatus,...(medical?{doctorNotes:f.get('doctorNotes'),injuryStatus:f.get('injuryStatus'),planDelivered:f.has('planDelivered')}:{})}));
 if(medical)document.querySelector('#fields [name=injuryStatus]').value=a.injuryStatus||'unknown';
 const cb=document.querySelector('#confirmCallBtn');if(cb)cb.onclick=()=>{document.querySelector('#modal').close();toggleConfirm(a,!(a.confirmCall&&a.confirmCall.done))};
 const pb=document.querySelector('#postponeBtn');if(pb)pb.onclick=()=>postponeDialog(a);
