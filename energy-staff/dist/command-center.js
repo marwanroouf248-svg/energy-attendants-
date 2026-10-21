@@ -4,7 +4,7 @@ const clean=v=>esc(String(v??''));
 function command(){
  if(!nodeUser||nodeUser.role!=='admin')return;
  const nav=document.querySelector('#nav');
- if(nav&&!nav.querySelector('[data-command]')){const b=document.createElement('button');b.dataset.command='yes';b.textContent='✦ مركز تشغيل الفرعين';b.onclick=()=>{page='command-center';render()};nav.prepend(b)}
+ if(nav&&!nav.querySelector('[data-command]')){const b=document.createElement('button');b.dataset.command='yes';b.innerHTML='<i>'+navIcon('command-center')+'</i> مركز تشغيل الفرعين';b.onclick=()=>{page='command-center';render()};nav.prepend(b)}
  if(page!=='command-center')return;
  const app=document.querySelector('#app');if(!app)return;
  const now=Date.now(),branches=db.branches||[],staff=db.staff||[],punches=db.punches||[],tasks=db.dailyAssignments||[],breaks=db.breaks||[],requests=db.requests||[],shiftRows=db.shifts||[];

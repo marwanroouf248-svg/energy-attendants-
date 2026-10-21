@@ -5,7 +5,7 @@ const safe=v=>esc(String(v??''));
 function pageView(){
 if(!nodeUser)return;const canEdit=['admin','manager'].includes(nodeUser.role);
 const nav=document.querySelector('#nav');
-if(nav&&!nav.querySelector('[data-shiftplanner]')){const button=document.createElement('button');button.dataset.shiftplanner='1';button.textContent=canEdit?'◷ جدول شفتات الموظفين':'◷ جدول شفتاتي';button.onclick=()=>{page='shift-planner';render()};nav.append(button)}
+if(nav&&!nav.querySelector('[data-shiftplanner]')){const button=document.createElement('button');button.dataset.shiftplanner='1';button.innerHTML='<i>'+navIcon('shift-planner')+'</i> '+(canEdit?'جدول شفتات الموظفين':'جدول شفتاتي');button.onclick=()=>{page='shift-planner';render()};nav.append(button)}
 if(page!=='shift-planner')return;
 const staff=(db.staff||[]).filter(s=>nodeUser.role==='admin'||(nodeUser.role==='manager'?s.branch===nodeUser.branch&&s.department===positions[nodeUser.position]:Number(s.id)===Number(nodeUser.id)));
 const shifts=(db.shiftAssignments||[]).filter(x=>staff.some(s=>Number(s.id)===Number(x.employeeId))).slice().sort((a,b)=>(a.day+a.start).localeCompare(b.day+b.start));

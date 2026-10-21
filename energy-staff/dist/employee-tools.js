@@ -5,7 +5,7 @@ function employeeHome(){
 if(!nodeUser||nodeUser.role!=='employee')return;
 const nav=document.querySelector('#nav');
 if(nav&&!nav.querySelector('[data-employee-tools]')){
-const b=document.createElement('button');b.dataset.employeeTools='1';b.textContent='◉ الحضور والبريكات وطلباتي';b.onclick=()=>{page='my-tools';render()};nav.append(b);
+const b=document.createElement('button');b.dataset.employeeTools='1';b.innerHTML='<i>'+navIcon('my-tools')+'</i> الحضور والبريكات وطلباتي';b.onclick=()=>{page='my-tools';render()};nav.append(b);
 }
 if(page!=='my-tools')return;
 const id=Number(nodeUser.id),person=db.staff.find(s=>Number(s.id)===id);

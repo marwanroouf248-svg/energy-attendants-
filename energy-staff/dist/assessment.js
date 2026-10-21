@@ -102,7 +102,7 @@ function panel(){
 if(!canAccess())return;
 const nav=document.querySelector('#nav');
 if(nav&&!nav.querySelector('[data-assessment]')){
-const b=document.createElement('button');b.dataset.assessment='1';b.textContent='✦ مواعيد الأسسمنت';b.onclick=()=>{page='assessment';render()};nav.append(b);
+const b=document.createElement('button');b.dataset.assessment='1';b.innerHTML='<i>'+navIcon('assessment')+'</i> مواعيد الأسسمنت';b.onclick=()=>{page='assessment';render()};nav.append(b);
 }
 if(page!=='assessment')return;
 const title=document.querySelector('#title');if(title)title.textContent='مواعيد الأسسمنت';const crumb=document.querySelector('#crumb');if(crumb)crumb.textContent='مواعيد الأسسمنت';

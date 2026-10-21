@@ -9,7 +9,7 @@ const run=s=>vm.runInContext(s,ctx);let count=0;function ok(label,cond){assert(c
 // Logged-in employee: three new nav entries appear
 run("nodeUser={role:'employee',id:7,full_name:'كابتن تجريبي',position:'كابتن',branch:'فرع فودافون'};previewSession={kind:'employee',employeeId:7};db.staff.push({id:7,name:'كابتن تجريبي',position:'كابتن',department:'التدريب',branch:'فرع فودافون'})");
 run("page='overview';render()");
-const navButtons=(nodes['#nav'].children||[]).filter(b=>b.dataset&&b.dataset.extras).map(b=>b.textContent);
+const navButtons=(nodes['#nav'].children||[]).filter(b=>b.dataset&&b.dataset.extras).map(b=>b.textContent||b.innerHTML);
 ok('faults nav button appears',navButtons.some(t=>t.includes('بلاغات الأعطال')));
 ok('shift swap nav button appears',navButtons.some(t=>t.includes('تبديل الشفتات')));
 ok('objections nav button appears',navButtons.some(t=>t.includes('النقاط والاعتراضات')));

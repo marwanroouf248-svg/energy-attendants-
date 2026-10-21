@@ -1,3 +1,4 @@
+if(typeof globalThis.navIcon!=='function')globalThis.navIcon=function(id,f){return f};
 /* Local preview workflows. Server authorization and shared storage remain required. */
 db.branches??=[...new Set(db.staff.map(s=>s.branch))].map(name=>({name,lat:null,lng:null}));db.punches??=[];db.audit??=[];db.adjustments??=[];db.attendanceOpening??=[];db.archived??=[];db.branchPermissions??={};db.seenRequests??=[];
 navs.push(['locations','⌖','مواقع الفروع'],['records','≡','سجل الحضور الفعلي'],['audit','↺','سجل التعديلات'],['archive','▥','أرشيف الموظفين']);

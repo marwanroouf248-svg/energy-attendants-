@@ -26,14 +26,14 @@ function dialog(title,fields,submit){
 function nav(){
  const bar=document.querySelector('#nav');
  if(!bar||!loggedIn())return;if(bar.querySelector('[data-extras]'))return;
- const add=(key,label)=>{const b=document.createElement('button');b.dataset.extras='1';b.textContent=label;b.onclick=()=>{page=key;render()};bar.append(b)};
- add('announcements','📢 الإعلانات');
- add('faults','⚒ بلاغات الأعطال');
- add('shift-swap','⇄ تبديل الشفتات');
- add('objections','✦ النقاط والاعتراضات');
- add('chat','💬 شات الفرع');
- if(canReview())add('documents','📄 وثائق الفريق');
- if(nodeUser.role==='admin')add('kiosk-admin','🔑 كشك البصمة');
+ const add=(key,label)=>{const b=document.createElement('button');b.dataset.extras='1';b.innerHTML='<i>'+navIcon(key)+'</i> '+label;b.onclick=()=>{page=key;render()};bar.append(b)};
+ add('announcements','الإعلانات');
+ add('faults','بلاغات الأعطال');
+ add('shift-swap','تبديل الشفتات');
+ add('objections','النقاط والاعتراضات');
+ add('chat','شات الفرع');
+ if(canReview())add('documents','وثائق الفريق');
+ if(nodeUser.role==='admin')add('kiosk-admin','كشك البصمة');
 }
 
 function faultsPanel(){

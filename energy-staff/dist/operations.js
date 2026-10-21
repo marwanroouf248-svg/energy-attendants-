@@ -1,6 +1,6 @@
 // Operations preview: local records only; never stores passwords or grants server access.
 db.accounts??=[];db.breaks??=[];db.points??=[];db.ruleVersions??=[];db.rules??={enabled:false,breakMinutes:15,maxBreaks:2,graceMinutes:0,redPerOverrun:1,greenToCancel:1,autoGreen:false,version:0};
-navs.push(['accounts','♙','الحسابات والأكسس'],['manual','✎','التسجيل اليدوي'],['breaks','☕','البريكات'],['score','◉','التحفيز والجزاءات'],['rules','▤','لائحة العمل'],['reports','▥','التقارير'] );
+navs.push(['accounts','♙','الحسابات والأكسس'],['manual','✎','التسجيل اليدوي'],['breaks','☕','البريكات'],['score','◉','التحفيز والجزاءات'],['rules','⚙','إعدادات اللائحة'],['reports','▥','التقارير'] );
 const operationRender=render, defaultAdminAdd=$('#add').onclick;let reportFilter={from:'',to:'',employee:'',branch:''};let scoreEmployee='';
 const accessLabels={view_live:'رؤية حالة الموظفين',view_contact:'عرض بيانات الاتصال',view_history:'عرض سجل الموظف',view_breaks:'عرض البريكات',view_reports:'عرض التقارير',export_reports:'تصدير وطباعة التقارير',manual_in:'إضافة حضور',manual_out:'إضافة انصراف',manual_edit:'تصحيح يوم قديم',manual_break:'إدارة بريك يدوي',approve_requests:'قبول ورفض الطلبات',create_employee:'إنشاء موظف',create_manager:'إنشاء مدير',edit_employee:'تعديل وأرشفة موظف',manage_access:'إدارة الأكسس',view_salary:'عرض الرواتب',edit_salary:'تعديل الرواتب',manage_points:'إضافة وإلغاء نقاط',manage_rules:'تعديل اللائحة'};
 function allEmployees(){return [...db.staff,...db.archived]}
