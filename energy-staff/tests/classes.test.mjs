@@ -48,3 +48,37 @@ test('captain punching outside scheduled class window gets flagged + auto incide
   assert.equal(db2.punches[0].classCheck,'داخل جدول الحصص');
   assert.equal(db2.classLogs.length,0);
 });
+test('captain self-registers own class: rate credited from schedule, window + duplicate + ownership enforced',()=>{
+  const db=ws();
+  employeeAction(db,admin,'class_create',{name:'Spinning',instructorType:'داخلي',captainStaffId:7,branch:'فرع فودافون',weekday:3,start:'18:00',end:'19:00',rate:999});
+  assert.equal(db.classes[0].rate,30); // price fixed at 30 regardless of input
+  const cid=db.classes[0].id;
+  // Wednesday 2026-10-21, 18:10 Cairo = 16:10 UTC (inside window)
+  employeeAction(db,emp,'class_register',{classId:cid},Date.parse('2026-10-21T16:10:00Z'));
+  const l=db.classLogs[0];
+  assert.equal(l.source,'self');assert.equal(l.credited,30);assert.equal(l.rate,30);assert.equal(l.captainStaffId,7);assert.equal(l.incidents.length,0);assert.equal(l.day,'2026-10-21');
+  // duplicate same day blocked
+  assert.throws(()=>employeeAction(db,emp,'class_register',{classId:cid},Date.parse('2026-10-21T16:30:00Z')),/ALREADY_EXISTS/);
+  // outside window rejected (16:00 Cairo = 13:00 UTC during DST, before start-30min)
+  const db2=ws();
+  employeeAction(db2,admin,'class_create',{name:'Spinning',instructorType:'داخلي',captainStaffId:7,branch:'فرع فودافون',weekday:3,start:'18:00',end:'19:00'});
+  assert.throws(()=>employeeAction(db2,emp,'class_register',{classId:db2.classes[0].id},Date.parse('2026-10-21T13:00:00Z')),/OUTSIDE_CLASS_WINDOW/);
+  assert.equal(db2.classLogs.length,0);
+  // inside grace edges allowed: 17:45 Cairo (=14:45 UTC, start-15min) and 19:50 Cairo (=16:50 UTC, end+50min)
+  employeeAction(db2,emp,'class_register',{classId:db2.classes[0].id},Date.parse('2026-10-21T14:45:00Z'));
+  assert.equal(db2.classLogs[0].credited,30);assert.equal(db2.classLogs[0].rate,30);
+  // well after end rejected (21:00 Cairo = 18:00 UTC)
+  const db2b=ws();
+  employeeAction(db2b,admin,'class_create',{name:'Spinning',instructorType:'داخلي',captainStaffId:7,branch:'فرع فودافون',weekday:3,start:'18:00',end:'19:00'});
+  assert.throws(()=>employeeAction(db2b,emp,'class_register',{classId:db2b.classes[0].id},Date.parse('2026-10-21T18:00:00Z')),/OUTSIDE_CLASS_WINDOW/);
+  // wrong day rejected (Thursday 2026-10-22)
+  const db3=ws();
+  employeeAction(db3,admin,'class_create',{name:'Spinning',instructorType:'داخلي',captainStaffId:7,branch:'فرع فودافون',weekday:3,start:'18:00',end:'19:00',rate:30});
+  assert.throws(()=>employeeAction(db3,emp,'class_register',{classId:db3.classes[0].id},Date.parse('2026-10-22T16:10:00Z')),/INVALID_DATE/);
+  // another employee cannot register someone else's class
+  const other={id:9,role:'employee',full_name:'موظف تاني',position:'ريسبشن',branch:'فرع فودافون'};
+  assert.throws(()=>employeeAction(db3,other,'class_register',{classId:db3.classes[0].id},Date.parse('2026-10-21T16:10:00Z')),/FORBIDDEN/);
+  // outside class (no staff link) cannot be self-registered
+  employeeAction(db3,admin,'class_create',{name:'يوجا',instructorType:'خارجي',captainName:'كابتن سارة',branch:'فرع فودافون',weekday:3,start:'20:00',end:'21:00'});
+  assert.throws(()=>employeeAction(db3,emp,'class_register',{classId:db3.classes[1].id},Date.parse('2026-10-21T16:10:00Z')),/FORBIDDEN/);
+});
