@@ -1,6 +1,8 @@
 import {createHash} from 'node:crypto';
 const digest=v=>createHash('sha256').update(String(v)).digest('hex');
-export const positions={'كابتن':'التدريب','سيلز':'السيلز','هاوس كيبنج':'الهاوس كيبنج','كواليتي':'الجودة','HR':'الموارد البشرية','أسسمنت — دكتور علاج طبيعي':'الأسسمنت والعلاج الطبيعي','Outdoor':'Outdoor','Move':'Move'};
+export const TITLE_ROLES={'مدير التدريب':'manager','مدير السيلز':'manager','مدير الجودة':'manager','مدير الموارد البشرية':'manager','مدير الهاوس كيبنج':'manager','مدير الأسسمنت والعلاج الطبيعي':'manager','مدير Outdoor':'manager','مدير Move':'manager','مدير عام':'admin'};
+export const positions={'كابتن':'التدريب','سيلز':'السيلز','هاوس كيبنج':'الهاوس كيبنج','كواليتي':'الجودة','HR':'الموارد البشرية','أسسمنت — دكتور علاج طبيعي':'الأسسمنت والعلاج الطبيعي','Outdoor':'Outdoor','Move':'Move','مدير التدريب':'التدريب','مدير السيلز':'السيلز','مدير الجودة':'الجودة','مدير الموارد البشرية':'الموارد البشرية','مدير الهاوس كيبنج':'الهاوس كيبنج','مدير الأسسمنت والعلاج الطبيعي':'الأسسمنت والعلاج الطبيعي','مدير Outdoor':'Outdoor','مدير Move':'Move','مدير عام':'الإدارة'};
+export function roleForTitle(t){return TITLE_ROLES[t]||'employee'}
 export function text(v,max=1000){if(typeof v!=='string'||!v.trim()||v.trim().length>max)throw Error('INVALID_INPUT');return v.trim()}
 export function email(v){const s=text(v,254).toLowerCase();if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s))throw Error('INVALID_EMAIL');return s}
 export function phone(v){const s=text(v,40).replace(/[٠-٩]/g,c=>c.charCodeAt(0)-1632).replace(/[\s()-]/g,'');if(!/^\+?\d{8,15}$/.test(s))throw Error('INVALID_PHONE');return s}
