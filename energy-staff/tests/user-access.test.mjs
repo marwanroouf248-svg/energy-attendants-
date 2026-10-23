@@ -1,0 +1,75 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {emptyWorkspace,employeeAction,visibleWorkspace,mayManage,positions,defaultAccessMatrix} from '../server/domain.mjs';
+const A='فرع فودافون',B='فرع الرخاوي — سيدات';
+function seed(){
+ const db=emptyWorkspace();
+ db.branches=[{name:A,lat:30,lng:31},{name:B,lat:32,lng:33}];
+ db.staff=[
+  {id:1,name:'Admin',position:'كابتن',department:positions['كابتن'],branch:A},
+  {id:13,name:'Mariam',position:'كابتن',department:positions['كابتن'],branch:B},
+  {id:20,name:'Cap B2',position:'كابتن',department:positions['كابتن'],branch:B},
+  {id:21,name:'Cap A2',position:'كابتن',department:positions['كابتن'],branch:A},
+  {id:30,name:'HK B',position:'عامل نظافة',department:positions['عامل نظافة']||'الهاوس كيبنج',branch:B}];
+ db.punches=[{id:'p20',employeeId:20,branch:B,in:'2026-10-23T08:00:00Z',out:null},{id:'p21',employeeId:21,branch:A,in:'2026-10-23T08:00:00Z',out:null}];
+ db.shifts=[{id:'sh1',name:'صباحي',branch:B,time:'09:00-17:00'},{id:'sh2',name:'صباحي',branch:A,time:'09:00-17:00'}];
+ db.userAccess={active:true,grants:{'13':{attendance:{level:'edit',branches:'own',departments:'own'},tasks:{level:'edit',branches:'own',departments:'own'},staff:{level:'view',branches:'own',departments:'own'}}}};
+ return {db,
+  mariam:{id:13,role:'employee',position:'كابتن',branch:B,full_name:'Mariam'},
+  capB2:{id:20,role:'employee',position:'كابتن',branch:B,full_name:'Cap B2'}};
+}
+test('employee with per-person grants sees granted scope and nothing beyond it',()=>{
+ const {db,mariam}=seed();
+ const w=visibleWorkspace(db,mariam);
+ assert.deepEqual(w.staff.map(s=>s.id).sort((a,b)=>a-b),[13,20],'self + same-branch same-dept captains only');
+ assert.deepEqual(w.punches.map(p=>p.id),['p20'],'granted attendance scope only');
+ assert.deepEqual(w.shifts.map(s=>s.id),['sh1'],'employee baseline own-branch shifts preserved');
+ assert.equal(w.myAccess.tasks.level,'edit');
+ assert.equal(w.payrollRuns.length,0);
+ assert.equal(w.myAccess.payroll,undefined,'no payroll grant');
+});
+test('grants drive mayManage within branch+dept only',()=>{
+ const {db,mariam}=seed();
+ const s20=db.staff.find(s=>s.id===20),s21=db.staff.find(s=>s.id===21),s30=db.staff.find(s=>s.id===30);
+ assert.equal(mayManage(mariam,s20,'tasks','edit',db),true);
+ assert.equal(mayManage(mariam,s20,'attendance','approve',db),true);
+ assert.equal(mayManage(mariam,s21,'tasks','edit',db),false,'other branch denied');
+ assert.equal(mayManage(mariam,s30,'tasks','edit',db),false,'other department denied');
+ assert.equal(mayManage(mariam,s20,'payroll','view',db),false,'payroll denied');
+ assert.equal(mayManage(mariam,s20,'requests','approve',db),false,'ungranted item denied');
+});
+test('task assign + review work inside scope, blocked outside',()=>{
+ const {db,mariam}=seed();
+ employeeAction(db,mariam,'task_assign',{employeeId:20,day:'2026-10-24',title:'ترتيب الفلور'},Date.parse('2026-10-23T13:00:00Z'));
+ const t=db.dailyAssignments.find(t=>Number(t.employeeId)===20);
+ assert.ok(t,'assignment created');
+ t.status='submitted';
+ employeeAction(db,mariam,'task_review',{id:t.id,approved:true},Date.parse('2026-10-23T14:00:00Z'));
+ assert.equal(t.status,'approved');
+ assert.throws(()=>employeeAction(db,mariam,'task_assign',{employeeId:21,day:'2026-10-24',title:'x'},Date.now()),/FORBIDDEN/);
+});
+test('per-person override narrows a manager below matrix scope',()=>{
+ const {db}=seed();
+ db.accessMatrix=defaultAccessMatrix();db.accessMatrix.active=true;
+ const mgr={id:40,role:'manager',position:'مدير التدريب',branch:B,full_name:'Mgr'};
+ db.staff.push({id:40,name:'Mgr',position:'مدير التدريب',department:positions['مدير التدريب'],branch:B});
+ const s20=db.staff.find(s=>s.id===20);
+ assert.equal(mayManage(mgr,s20,'tasks','edit',db),true,'matrix grants مدير التدريب tasks edit');
+ db.userAccess.grants['40']={tasks:{level:'none',branches:'own',departments:'own'}};
+ assert.equal(mayManage(mgr,s20,'tasks','edit',db),false,'override blocks tasks');
+ assert.equal(mayManage(mgr,s20,'attendance','approve',db),true,'other items still follow matrix');
+});
+test('no grants: employee behavior unchanged',()=>{
+ const {db,mariam,capB2}=seed();
+ db.userAccess={active:true,grants:{}};
+ const w=visibleWorkspace(db,mariam);
+ assert.deepEqual(w.staff.map(s=>s.id),[13]);
+ assert.equal(w.punches.length,0,'only own punches; none recorded for her');
+ assert.equal(w.myAccess,null);
+ const w2=visibleWorkspace(db,capB2);
+ assert.deepEqual(w2.shifts.map(s=>s.id),['sh1']);
+});
+test('sanitizeUserAccess via emptyWorkspace/hydrate shape drops garbage',async()=>{
+ const {sanitizeUserAccess}=await import('../server/domain.mjs');
+ const ua=sanitizeUserAccess({grants:{'13':{tasks:{level:'edit',branches:'both',departments:'all'},evil:{level:'edit'},attendance:{level:'superuser'}},'x-y':{tasks:{level:'view'}}}});
+ assert.deepEqual(ua.grants,{'13':{tasks:{level:'edit',branches:'both',departments:'all'}}});
+});

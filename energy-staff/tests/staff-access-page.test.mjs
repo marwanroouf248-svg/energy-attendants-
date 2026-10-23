@@ -2,7 +2,8 @@ import test from 'node:test';import assert from 'node:assert/strict';
 import vm from 'node:vm';import {readFileSync} from 'node:fs';
 const source=readFileSync(new URL('../dist/hostinger.js',import.meta.url),'utf8');
 const items=source.match(/const STAFF_ACCESS_ITEMS=.*$/m)[0];
-const scope=source.match(/function staffAccessScope[\s\S]*?\n}/)[0];
+const uaSummary=source.match(/function staffAccessUaSummary[\s\S]*?\n}/)[0];
+const scope=source.match(/function staffAccessScope[\s\S]*?\n}\n/)[0];
 const view=source.match(/function staffAccessView[\s\S]*?\n}\n/)[0];
 function ctx(serverMembers,db){
  const context=vm.createContext({
@@ -10,7 +11,7 @@ function ctx(serverMembers,db){
   esc:s=>String(s??''),
   card:(t,b)=>t+'|'+b,
  });
- vm.runInContext([items,scope,view].join('\n'),context);
+ vm.runInContext([items,uaSummary,scope,view].join('\n'),context);
  return context;
 }
 const db={staff:[{id:1,department:'التدريب',branchAccess:'both'},{id:2,department:'التدريب'},{id:3,department:'السيلز'}],accessMatrix:{active:true,grants:{'مدير التدريب':{tasks:{level:'edit'},attendance:{level:'approve'},reports:{level:'view'},payroll:{level:'none'}}}}};

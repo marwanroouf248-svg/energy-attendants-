@@ -30,7 +30,7 @@ leadUpdateForm=function(id){if(!nodeUser||nodeUser.role==='admin')return localLe
 requestForEmployee=function(){if(!nodeUser)return localRequest();safeSubmit('طلب جديد',options('نوع الطلب','type',['إجازة اعتيادية','إجازة مرضية','إذن انصراف مبكر','إذن تأخير وصول','إذن خروج وعودة أثناء الوردية','تصحيح بصمة','تبديل وردية'])+field('التفاصيل','detail')+'<label>اليوم (اختياري)<input name="day" type="date"></label><label>عدد الساعات (اختياري)<input name="hours" type="number" min="0.5" max="24" step="0.5"></label>',async f=>nativeAction('request_create',{type:f.get('type'),detail:f.get('detail'),day:f.get('day')||undefined,hours:f.get('hours')||undefined}))};
 reviewRequest=function(id,approved){if(!nodeUser||nodeUser.role==='admin')return localReviewRequest(id,approved);const r=db.requests.find(r=>String(r.id)===String(id));if(!r)return;const hoursField=approved?`<label>عدد الساعات المعتمدة<input name="hours" type="number" min="0.5" max="24" step="0.5" value="${r.hours||''}"></label>`:'';safeSubmit((approved?'قبول':'رفض')+' طلب '+r.name+' — '+r.type,(approved?options('الاحتساب','paid',['مدفوع','غير مدفوع']):'')+hoursField+(approved?'':field('سبب الرفض','note')),async f=>nativeAction('request_review',{id,approved,paid:f.get('paid')==='مدفوع',hours:f.get('hours')||undefined,note:f.get('note')||undefined}))};
 leaveWorkspace=async function(){if(nodeUser&&nodeSaving){toast('انتظر اكتمال حفظ البيانات قبل الخروج.');return}if(nodeUser){try{await nodeApi('logout',{method:'POST'})}catch(e){toast('تعذر تسجيل الخروج من السيرفر؛ حاول تاني.');return}}nodeUser=null;nodeRevision=0;nodeWriteBlocked=false;serverMembers=[];$('#role').disabled=false;nativeExit();await checkHostingerServer()};
-render=function(){if(nodeUser){role=nodeUser.role==='admin'?'الإدارة':nodeUser.role==='manager'?'مدير قسم':'الموظف';selectedEmployee=Number(nodeUser.id);if(nodeUser.role==='manager')managerDepartment=positions[nodeUser.position]}nativeRender();if(!nodeUser||!previewSession)return;$('#role').hidden=true;$('#role').disabled=true;for(const name of ['managerDept','finalManagerDept'])if($('#'+name))$('#'+name).disabled=true;$('.demo').textContent='دخول بكلمة مرور';if(!$('#serverSyncStatus')){$('#app').insertAdjacentHTML('afterbegin','<div class="notice"><span id="serverSyncStatus"></span><button id="reloadServer">تحديث البيانات</button></div>');$('#reloadServer').onclick=()=>refreshServerData().catch(e=>toast(e.message))}const navEl=document.querySelector('#nav');if(navEl&&myProfiles.length>1&&!$('#profileSwitcher')){navEl.insertAdjacentHTML('afterbegin','<select id="profileSwitcher" style="margin:8px;width:90%" title="تبديل البروفايل">'+myProfiles.map(p=>'<option value="'+p.id+'" '+((activeProfile||Number(nodeUser.id))===p.id?'selected':'')+'>'+esc(p.name)+' — '+esc(p.position||'')+(p.primary?' (حسابي)':'')+'</option>').join('')+'</select>');$('#profileSwitcher').onchange=e=>{const v=Number(e.target.value);if(v===Number(nodeUser.id)){activeProfile=null;localStorage.removeItem('energyActiveProfile')}else{activeProfile=v;localStorage.setItem('energyActiveProfile',String(v))}refreshServerData().catch(err=>toast(err.message))}}syncStatus();
+render=function(){if(nodeUser){role=nodeUser.role==='admin'?'الإدارة':nodeUser.role==='manager'?'مدير قسم':'الموظف';selectedEmployee=Number(nodeUser.id);if(nodeUser.role==='manager')managerDepartment=positions[nodeUser.position];if(nodeUser.role==='employee'&&db.myAccess&&Object.keys(db.myAccess).length){role='مدير قسم';managerDepartment=positions[nodeUser.position]}}nativeRender();if(!nodeUser||!previewSession)return;$('#role').hidden=true;$('#role').disabled=true;for(const name of ['managerDept','finalManagerDept'])if($('#'+name))$('#'+name).disabled=true;$('.demo').textContent='دخول بكلمة مرور';if(!$('#serverSyncStatus')){$('#app').insertAdjacentHTML('afterbegin','<div class="notice"><span id="serverSyncStatus"></span><button id="reloadServer">تحديث البيانات</button></div>');$('#reloadServer').onclick=()=>refreshServerData().catch(e=>toast(e.message))}const navEl=document.querySelector('#nav');if(navEl&&myProfiles.length>1&&!$('#profileSwitcher')){navEl.insertAdjacentHTML('afterbegin','<select id="profileSwitcher" style="margin:8px;width:90%" title="تبديل البروفايل">'+myProfiles.map(p=>'<option value="'+p.id+'" '+((activeProfile||Number(nodeUser.id))===p.id?'selected':'')+'>'+esc(p.name)+' — '+esc(p.position||'')+(p.primary?' (حسابي)':'')+'</option>').join('')+'</select>');$('#profileSwitcher').onchange=e=>{const v=Number(e.target.value);if(v===Number(nodeUser.id)){activeProfile=null;localStorage.removeItem('energyActiveProfile')}else{activeProfile=v;localStorage.setItem('energyActiveProfile',String(v))}refreshServerData().catch(err=>toast(err.message))}}syncStatus();
 if(nodeUser){
  const ownAddPages=['accounts','branch-access','classes'];
  if(nodeUser.role==='admin'&&!ownAddPages.includes(page)){$('#add').hidden=false;$('#add').textContent='＋ تجهيز حساب موظف';$('#add').onclick=()=>{page='rollout-readiness';render()}}
@@ -128,15 +128,23 @@ setInterval(async()=>{
 // صفحة «أكسس كل موظف»: كل حسابات الدخول الحقيقية على السيرفر ووصول كل شخص في مكان واحد.
 navs.push(['staff-access','⚿','أكسس كل موظف']);
 const STAFF_ACCESS_ITEMS=[['attendance','الحضور والانصراف'],['records','سجل الحضور'],['requests','الطلبات'],['tasks','المهام'],['shifts','الشفتات'],['breaks','البريكات'],['classes','الكلاسات'],['sales','السيلز والمكالمات'],['score','التقييم والنقاط'],['reports','التقارير'],['staff','فريق العمل'],['payroll','المرتبات']];
+function staffAccessUaSummary(m){
+ const g=(db.userAccess&&db.userAccess.grants||{})[String(m.id)];
+ if(!g)return '';
+ const names={none:'منع',view:'عرض',approve:'اعتماد',edit:'تعديل'};
+ const parts=STAFF_ACCESS_ITEMS.filter(([item])=>g[item]).map(([item,label])=>label+': '+(names[g[item].level]||g[item].level));
+ return '<small><b>أكسيز مخصص ('+parts.length+'):</b> '+parts.join('، ')+'</small>';
+}
 function staffAccessScope(m){
- if(m.role==='admin')return '<small><b>إدارة كاملة:</b> كل البنود على الفرعين</small>';
- if(m.role!=='manager')return '<small>بياناته الشخصية (حضوره، مهامه، طلباته، نقاطه) + الشات ولائحة العمل</small>';
+ const ua=staffAccessUaSummary(m);
+ if(m.role==='admin')return '<small><b>إدارة كاملة:</b> كل البنود على الفرعين</small>'+(ua?'<br>'+ua:'');
+ if(m.role!=='manager')return '<small>بياناته الشخصية (حضوره، مهامه، طلباته، نقاطه) + الشات ولائحة العمل</small>'+(ua?'<br>'+ua:'');
  const g=((db.accessMatrix&&db.accessMatrix.grants)||{})[m.position];
- if(!g)return '<small>مدير — مفيش نطاقات محفوظة لمسماه في مصفوفة الأكسس</small>';
+ if(!g)return '<small>مدير — مفيش نطاقات محفوظة لمسماه في مصفوفة الأكسس</small>'+(ua?'<br>'+ua:'');
  const byLevel={edit:[],approve:[],view:[]};
  STAFF_ACCESS_ITEMS.forEach(([item,label])=>{const c=g[item];const lvl=c&&c.level||'none';if(byLevel[lvl])byLevel[lvl].push(label)});
  const names={edit:'تعديل',approve:'اعتماد',view:'عرض'};
- return ['edit','approve','view'].map(l=>byLevel[l].length?`<small><b>${names[l]}:</b> ${byLevel[l].join('، ')}</small>`:'').filter(Boolean).join('<br>')||'<small>—</small>';
+ return (['edit','approve','view'].map(l=>byLevel[l].length?`<small><b>${names[l]}:</b> ${byLevel[l].join('، ')}</small>`:'').filter(Boolean).join('<br>')||'<small>—</small>')+(ua?'<br>'+ua:'');
 }
 function staffAccessView(){
  const stById={};(db.staff||[]).forEach(s=>stById[String(s.id)]=s);
@@ -148,9 +156,36 @@ function staffAccessView(){
   const ba=st.branchAccess||'own';
   const baLabel=ba==='both'?'الفرعين':ba==='any'?'أي فرع':'فرعه فقط';
   const statusLabel=({pending:'منتظر الموافقة',approved:'مقبول',rejected:'مرفوض',disabled:'موقوف'})[m.status]||m.status;
-  return `<tr><td><b>${esc(m.full_name)}</b><br><small>${esc(m.email||'—')}</small></td><td>${esc(m.position||'—')}<br><small>${esc(st.department||'')}</small></td><td>${roleLabel}<br><small>${statusLabel}</small></td><td>${esc(m.branch||st.branch||'—')}<br><small>البصمة: ${baLabel}</small></td><td style="min-width:240px">${staffAccessScope(m)}</td><td><button type="button" data-sa-review="${m.id}">إدارة الحساب</button></td></tr>`;
+  return `<tr><td><b>${esc(m.full_name)}</b><br><small>${esc(m.email||'—')}</small></td><td>${esc(m.position||'—')}<br><small>${esc(st.department||'')}</small></td><td>${roleLabel}<br><small>${statusLabel}</small></td><td>${esc(m.branch||st.branch||'—')}<br><small>البصمة: ${baLabel}</small></td><td style="min-width:240px">${staffAccessScope(m)}</td><td><button type="button" data-sa-review="${m.id}">إدارة الحساب</button> <button type="button" data-sa-ua="${m.id}">أكسيز مخصص</button></td></tr>`;
  }).join('');
  return card('أكسس كل موظف — كل حسابات الدخول ووصولها',`<p class="empty" style="margin:0 0 12px">دي النظرة المجمعة لكل حساب دخول على السيرفر. تغيير الدور أو المسمى أو الفرع بيتم من زرار «إدارة الحساب»، فروع البصمة التفصيلية لكل موظف من صفحة «أكسس حضور الفروع»، ونطاقات المديرين التفصيلية من «مصفوفة الأكسس».</p><div class="table-wrap"><table><tr><th>الموظف</th><th>المسمى / القسم</th><th>الدور / الحالة</th><th>الفرع / البصمة</th><th>الوصول المسموح</th><th></th></tr>${rows||'<tr><td colspan="6">لا توجد حسابات بعد</td></tr>'}</table></div>`);
 }
 const staffAccessPrevRender=render;
-render=function(){staffAccessPrevRender();const saNav=document.querySelector('#nav');if(saNav&&nodeUser&&nodeUser.role==='admin'&&!saNav.querySelector('[data-staff-access]')){const b=document.createElement('button');b.dataset.staffAccess='1';b.innerHTML='<i>'+navIcon('staff-access','⚿')+'</i> أكسس كل موظف';b.onclick=()=>{page='staff-access';render()};const anchor=saNav.querySelector('[data-page="access-matrix"]');anchor?anchor.after(b):saNav.append(b)};if(page==='staff-access'){if(!nodeUser||nodeUser.role!=='admin'){$('#app').innerHTML='<p class="empty">صفحة خاصة بالإدارة</p>';return}$('#app').innerHTML=staffAccessView();document.querySelectorAll('[data-sa-review]').forEach(b=>b.onclick=()=>reviewServerAccount(Number(b.dataset.saReview)))}};
+render=function(){staffAccessPrevRender();const saNav=document.querySelector('#nav');if(saNav&&nodeUser&&nodeUser.role==='admin'&&!saNav.querySelector('[data-staff-access]')){const b=document.createElement('button');b.dataset.staffAccess='1';b.innerHTML='<i>'+navIcon('staff-access','⚿')+'</i> أكسس كل موظف';b.onclick=()=>{page='staff-access';render()};const anchor=saNav.querySelector('[data-page="access-matrix"]');anchor?anchor.after(b):saNav.append(b)};if(page==='staff-access'){if(!nodeUser||nodeUser.role!=='admin'){$('#app').innerHTML='<p class="empty">صفحة خاصة بالإدارة</p>';return}$('#app').innerHTML=staffAccessView();document.querySelectorAll('[data-sa-review]').forEach(b=>b.onclick=()=>reviewServerAccount(Number(b.dataset.saReview)));document.querySelectorAll('[data-sa-ua]').forEach(b=>b.onclick=()=>staffAccessUaEditor(Number(b.dataset.saUa)))}};
+
+// صلاحيات شخصية مخصصة (userAccess): الصفحات المرتبطة بكل بند عشان القائمة الجانبية.
+const UA_ITEM_PAGES={attendance:['attendance','records'],records:['records'],requests:['requests'],tasks:[],shifts:['shifts'],breaks:['breaks'],classes:['classes'],sales:['sales-work','sales-calls','sales-dashboard'],score:['score'],reports:['reports'],staff:['staff'],payroll:['payroll']};
+const UA_LEVELS=['none','view','approve','edit'];
+function uaCan(item,level='view'){const c=db.myAccess&&db.myAccess[item];return !!c&&UA_LEVELS.indexOf(c.level||'none')>=UA_LEVELS.indexOf(level)}
+function uaPageList(){const out=[];for(const [item,pages] of Object.entries(UA_ITEM_PAGES))if(uaCan(item,'view'))out.push(...pages);return out}
+
+// محرر الأكسيز المخصص لكل موظف (userAccess): اختيار المستوى والنطاق لكل بند بيتخزن في db.userAccess ويتنفذ من السيرفر.
+function staffAccessUaEditor(id){
+ const m=(serverMembers||[]).find(x=>Number(x.id)===Number(id));if(!m)return;
+ const g=((db.userAccess&&db.userAccess.grants)||{})[String(m.id)]||{};
+ const lvlName={none:'ممنوع تمامًا',view:'عرض فقط',approve:'عرض + اعتماد',edit:'عرض + اعتماد + تعديل'};
+ const rows=STAFF_ACCESS_ITEMS.map(([item,label])=>{const c=g[item]||{};return '<tr><td>'+label+'</td><td><select name="lvl_'+item+'"><option value="">وراثة الدور/الوظيفة</option>'+['none','view','approve','edit'].map(l=>'<option value="'+l+'" '+(c.level===l?'selected':'')+'>'+lvlName[l]+'</option>').join('')+'</select></td><td><select name="br_'+item+'"><option value="own" '+(c.branches!=='both'?'selected':'')+'>فرعه فقط</option><option value="both" '+(c.branches==='both'?'selected':'')+'>الفرعين</option></select></td><td><select name="dp_'+item+'"><option value="own" '+(c.departments!=='all'?'selected':'')+'>قسمه فقط</option><option value="all" '+(c.departments==='all'?'selected':'')+'>كل الأقسام</option></select></td></tr>'}).join('');
+ openForm('أكسيز مخصص — '+m.full_name,'<p>أي بند له مستوى هنا يتطبق على '+esc(m.full_name)+' شخصيًا ويتجاوز المصفوفة؛ «وراثة» يرجّع البند للدور/الوظيفة. المنع والسماح يتنفذوا من السيرفر نفسه، مش مجرد إخفاء أزرار.</p><div class="table-wrap"><table><tr><th>البند</th><th>المستوى</th><th>الفروع</th><th>الأقسام</th></tr>'+rows+'</table></div>',()=>{});
+ const form=$('#form');
+ form.onsubmit=async e=>{
+  e.preventDefault();const b=form.querySelector('[type=submit]');b.disabled=true;
+  try{
+   const f=new FormData(form),grants={};
+   for(const [item] of STAFF_ACCESS_ITEMS){const l=f.get('lvl_'+item);if(l)grants[item]={level:l,branches:f.get('br_'+item)==='both'?'both':'own',departments:f.get('dp_'+item)==='all'?'all':'own'}}
+   db.userAccess=db.userAccess&&typeof db.userAccess==='object'?db.userAccess:{active:true,grants:{}};
+   db.userAccess.grants=db.userAccess.grants||{};
+   if(Object.keys(grants).length)db.userAccess.grants[String(m.id)]=grants;else delete db.userAccess.grants[String(m.id)];
+   save();$('#modal').close();toast('اتحفظ الأكسيز المخصص — هيشتغل عند الطرف التاني مع أول تحديث بيانات');render();
+  }catch(err){toast(err.message)}finally{b.disabled=false}
+ };
+}
