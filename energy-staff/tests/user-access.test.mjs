@@ -129,3 +129,24 @@ test('extended items: faults/swaps/docs/kiosk/announcements enforce only with a 
  db.shiftAssignments.push({id:'sa13',employeeId:13,employeeName:'Mariam',branch:B,day:'2026-10-25',start:'09:00',end:'17:00'});
  assert.throws(()=>employeeAction(db,mariam,'shift_swap_request',{shiftId:'sa13',targetEmployeeId:20},Date.parse('2026-10-23T10:00:00Z')),/FORBIDDEN/,'swaps none: request denied');
 });
+test('locations/policy controls: admin default, scoped grant, invalid input rejected',()=>{
+ const {db,mariam}=seed();
+ const B2=db.branches.find(b=>b.name!==B).name;
+ // defaults: non-admin denied
+ assert.throws(()=>employeeAction(db,mariam,'branch_location_update',{branch:B,lat:30.1,lng:32.3},Date.now()),/FORBIDDEN/,'default: employee cannot set branch location');
+ assert.throws(()=>employeeAction(db,mariam,'policy_settings_update',{rules:{breakMinutes:20}},Date.now()),/FORBIDDEN/,'default: employee cannot change rules');
+ // locations grant own scope: own branch ok, other branch denied
+ db.userAccess.grants['13']={locations:{level:'edit',branches:'own',departments:'all'}};
+ employeeAction(db,mariam,'branch_location_update',{branch:B,lat:30.05,lng:32.28,radius:120},Date.now());
+ const br=db.branches.find(b=>b.name===B);assert.equal(br.lat,30.05,'own branch location set');assert.equal(br.radiusMeters,120);
+ assert.throws(()=>employeeAction(db,mariam,'branch_location_update',{branch:B2,lat:30.1,lng:32.3},Date.now()),/FORBIDDEN/,'other branch denied');
+ assert.throws(()=>employeeAction(db,mariam,'branch_location_update',{branch:B,lat:91,lng:32.3},Date.now()),/INVALID_INPUT/,'invalid lat rejected');
+ // policy grant: partial scope (own branch) denied for global settings; full scope allowed
+ db.userAccess.grants['13']={policy:{level:'edit',branches:'own',departments:'all'}};
+ assert.throws(()=>employeeAction(db,mariam,'policy_settings_update',{rules:{breakMinutes:20}},Date.now()),/FORBIDDEN/,'global rules need full scope');
+ db.userAccess.grants['13']={policy:{level:'edit',branches:'both',departments:'all'}};
+ const v0=db.rules.version;
+ employeeAction(db,mariam,'policy_settings_update',{rules:{breakMinutes:20,graceMinutes:0}},Date.now());
+ assert.equal(db.rules.breakMinutes,20,'rules updated');assert.equal(db.rules.version,v0+1,'version bumped');assert.equal(db.ruleVersions.at(-1).before.breakMinutes,15,'rollback snapshot kept');
+ assert.throws(()=>employeeAction(db,mariam,'policy_settings_update',{rules:{breakMinutes:2000}},Date.now()),/INVALID_INPUT/,'out-of-range rejected');
+});
