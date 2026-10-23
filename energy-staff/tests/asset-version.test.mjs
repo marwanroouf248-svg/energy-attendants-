@@ -1,16 +1,15 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 process.env.NODE_ENV='test';process.env.PUBLIC_ORIGIN='http://localhost:3000';process.env.INITIAL_ADMIN_EMAIL='owner@example.test';process.env.ADMIN_SETUP_TOKEN='test-setup-token-'.repeat(3);
 import {readFileSync} from 'node:fs';
-import {contentToken,stampToken} from '../server/asset-version.mjs';
+import {contentToken} from '../server/asset-version.mjs';
 const {server}=await import('../server/index.mjs');
 for(const htmlPath of ['dist/index.html','dist/kiosk.html']){
- test(htmlPath+' asset URLs carry the current content-hash token',()=>{
+ test(htmlPath+' every local js/css ref carries that file live content token',()=>{
   const html=readFileSync(htmlPath,'utf8');
-  const refs=[...new Set([...html.matchAll(/(?:src|href)="([^"?]+?)(?:\?v=[^"]*)?"/g)].map(m=>m[1]).filter(u=>!u.includes('://')&&!u.startsWith('data:')&&/\.(js|css)$/.test(u)))].sort();
+  const refs=[...new Set([...html.matchAll(/(?:src|href)="([^"?]+?)(?:\?v=[^"]*)?"/g)].map(m=>m[1]).filter(u=>!u.includes('://')&&!u.startsWith('data:')&&/\.(js|css)$/.test(u)))];
   assert(refs.length>5,'expected stamped asset refs');
-  const token=stampToken(refs.map(name=>({name,bytes:readFileSync('dist/'+name)})));
-  const unstamped=refs.filter(r=>!html.includes('"'+r+'?v='+token+'"'));
-  assert.deepEqual(unstamped,[],'run: node scripts/stamp-version.mjs (stale for '+htmlPath+')');
+  const stale=refs.filter(r=>!html.includes('"'+r+'?v='+contentToken(readFileSync('dist/'+r))+'"'));
+  assert.deepEqual(stale,[],'run: node scripts/stamp-version.mjs (stale refs in '+htmlPath+')');
  });
 }
 test('server marks immutable only when ?v equals the live content token',async()=>{

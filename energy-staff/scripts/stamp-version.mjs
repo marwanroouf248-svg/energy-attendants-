@@ -1,13 +1,17 @@
-// Stamps content-hash version tokens into the html entry points. Run after ANY change to
-// files in dist/ (js/css): node scripts/stamp-version.mjs — then upload the changed html
-// plus the edited assets and restart. tests/asset-version.test.mjs fails if you forget.
+// Stamps per-file content-hash tokens into the html entry points: every local js/css ref
+// gets ?v=<sha1 of that file's bytes>. Run after ANY change to dist/ assets:
+//   node scripts/stamp-version.mjs  (or npm run stamp)
+// then upload the changed html + edited assets and restart.
+// tests/asset-version.test.mjs FAILS if the stamp is stale. The server only serves
+// immutable when ?v equals the live file hash, so an unstamped edit degrades to no-cache
+// instead of poisoning the year-long cache.
 import {readFileSync,writeFileSync} from 'node:fs';
-import {stampToken} from '../server/asset-version.mjs';
+import {contentToken} from '../server/asset-version.mjs';
 for(const htmlPath of ['dist/index.html','dist/kiosk.html']){
- let html=readFileSync(htmlPath,'utf8');
- const refs=[...new Set([...html.matchAll(/(?:src|href)="([^"?]+?)(?:\?v=[^"]*)?"/g)].map(m=>m[1]).filter(u=>!u.includes('://')&&!u.startsWith('data:')&&/\.(js|css)$/.test(u)))].sort();
- const token=stampToken(refs.map(name=>({name,bytes:readFileSync('dist/'+name)})));
- html=html.replace(/((?:src|href)="[^"?]+\.(?:js|css))(?:\?v=[^"]*)?"/g,'$1?v='+token+'"');
- writeFileSync(htmlPath,html);
- console.log(htmlPath,'v='+token,'('+refs.length+' assets)');
+ let html=readFileSync(htmlPath,'utf8');let n=0;
+ html=html.replace(/((?:src|href)=")([^"?]+\.(?:js|css))(?:\?v=[^"]*)?"/g,(m,pre,u)=>{
+  if(u.includes('://')||u.startsWith('data:'))return m;
+  n++;return pre+u+'?v='+contentToken(readFileSync('dist/'+u))+'"';
+ });
+ writeFileSync(htmlPath,html);console.log(htmlPath,n,'assets stamped');
 }
