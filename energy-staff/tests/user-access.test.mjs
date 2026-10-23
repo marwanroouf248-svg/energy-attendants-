@@ -151,7 +151,7 @@ test('locations/policy controls: admin default, scoped grant, invalid input reje
  assert.throws(()=>employeeAction(db,mariam,'policy_settings_update',{rules:{breakMinutes:2000}},Date.now()),/INVALID_INPUT/,'out-of-range rejected');
 });
 test('overtime continuation: 8h gate, two-stage manager then admin approval, no auto hours',()=>{
- const {db,mariam}=seed();
+ const {db,mariam,capB2}=seed();
  const B2=db.branches.find(b=>b.name!==B).name;
  db.staff.push({id:40,name:'Mgr',position:'مدير التدريب',department:'التدريب',branch:B});
  db.staff.push({id:99,name:'Mgr2',position:'مدير التدريب',department:'التدريب',branch:A});
@@ -170,9 +170,20 @@ test('overtime continuation: 8h gate, two-stage manager then admin approval, no 
  assert.throws(()=>employeeAction(db,mariam,'overtime_request_create',{punchId:'p1',reason:'x'},t8+60e3),/DUPLICATE/);
  // manager out of scope (staff 21 other branch) cannot review: build out-of-scope manager
  const otherMgr={id:99,full_name:'Mgr2',role:'manager',position:'مدير التدريب',branch:A};
- assert.throws(()=>employeeAction(db,otherMgr,'overtime_request_review',{id:r.id,approved:true},t8+120e3),/FORBIDDEN/);
- // admin (even Marwan) cannot do the direct-manager stage
- assert.throws(()=>employeeAction(db,admin,'overtime_request_review',{id:r.id,approved:true},t8+150e3),/FORBIDDEN/);
+ assert.throws(()=>employeeAction(db,otherMgr,'overtime_request_review',{id:r.id,approved:true},t8+120e3),/NO_MANAGER_ASSIGNED|FORBIDDEN/);
+ // fail closed: no direct manager assigned -> nobody can approve stage 1
+ assert.throws(()=>employeeAction(db,admin,'overtime_request_review',{id:r.id,approved:true},t8+140e3),/NO_MANAGER_ASSIGNED/);
+ assert.throws(()=>employeeAction(db,manager,'overtime_request_review',{id:r.id,approved:true},t8+150e3),/NO_MANAGER_ASSIGNED/);
+ // only Marwan (id 1) can assign the direct manager
+ const karim={id:19,role:'admin',position:'مدير عام',branch:A,full_name:'Karim'};
+ assert.throws(()=>employeeAction(db,karim,'overtime_manager_assign',{employeeId:13,managerId:40},t8+155e3),/FORBIDDEN/);
+ employeeAction(db,admin,'overtime_manager_assign',{employeeId:13,managerId:40},t8+156e3);
+ assert.equal(db.staff.find(s=>s.id===13).directManagerId,40);
+ // assigned manager visibility
+ assert.equal(visibleWorkspace(db,manager).overtimeRequests.length,1);
+ // wrong (assigned-to-other) reviewer blocked after assignment
+ assert.throws(()=>employeeAction(db,otherMgr,'overtime_request_review',{id:r.id,approved:true},t8+157e3),/FORBIDDEN/);
+ assert.throws(()=>employeeAction(db,admin,'overtime_request_review',{id:r.id,approved:true},t8+158e3),/FORBIDDEN/);
  // manager of same branch but another department is not the direct manager
  const otherDeptMgr={id:41,full_name:'Mgr3',role:'manager',position:'مدير السيلز',branch:B};
  db.staff.push({id:41,name:'Mgr3',position:'مدير السيلز',department:'السيلز',branch:B});
@@ -183,20 +194,34 @@ test('overtime continuation: 8h gate, two-stage manager then admin approval, no 
  // manager cannot do the admin stage
  assert.throws(()=>employeeAction(db,manager,'overtime_request_review',{id:r.id,approved:true},t8+240e3),/FORBIDDEN|INVALID_STATE/);
  // another admin (Karim, id 19) cannot do the final stage — Marwan (id 1) only
- const karim={id:19,role:'admin',position:'مدير عام',branch:A,full_name:'Karim'};
  assert.throws(()=>employeeAction(db,karim,'overtime_request_review',{id:r.id,approved:true},t8+250e3),/FORBIDDEN/);
  // admin approves -> approved; punch untouched (no fabricated hours)
  employeeAction(db,admin,'overtime_request_review',{id:r.id,approved:true},t8+300e3);
  assert.equal(r.status,'approved');
  assert.equal(db.punches[0].out,null,'no auto-checkout');
  assert.ok(!('manualHours' in db.punches[0])&&!('overtimeHours' in db.punches[0]),'no hours written');
+ // an assigned direct manager with role employee (e.g. Mariam hypothesis) CAN approve stage 1
+ db.punches.push({id:'p3',employeeId:20,name:'Cap B2',branch:B,in:new Date(t0).toISOString(),out:null,inLocation:{kiosk:true}});
+ employeeAction(db,capB2,'overtime_request_create',{punchId:'p3',reason:'z'},t8);
+ const r3=db.overtimeRequests.find(x=>x.punchId==='p3');
+ employeeAction(db,admin,'overtime_manager_assign',{employeeId:20,managerId:13},t8+60e3);
+ employeeAction(db,mariam,'overtime_request_review',{id:r3.id,approved:true},t8+120e3);
+ assert.equal(r3.status,'pending_admin');assert.equal(r3.managerReview.by,'Mariam');
+ employeeAction(db,admin,'overtime_request_review',{id:r3.id,approved:false},t8+180e3);
+ assert.equal(r3.status,'rejected');
+ // clearing the assignment closes stage 1 again
+ db.punches.push({id:'p4',employeeId:20,name:'Cap B2',branch:B,in:new Date(t0).toISOString(),out:null,inLocation:{kiosk:true}});
+ employeeAction(db,capB2,'overtime_request_create',{punchId:'p4',reason:'w'},t8);
+ employeeAction(db,admin,'overtime_manager_assign',{employeeId:20,managerId:null},t8+60e3);
+ assert.equal(db.staff.find(s=>s.id===20).directManagerId,undefined);
+ assert.throws(()=>employeeAction(db,mariam,'overtime_request_review',{id:db.overtimeRequests.find(x=>x.punchId==='p4').id,approved:true},t8+90e3),/NO_MANAGER_ASSIGNED/);
  // visibility: employee sees own; out-of-scope manager sees none
  assert.equal(visibleWorkspace(db,mariam).overtimeRequests.length,1);
  assert.equal(visibleWorkspace(db,otherMgr).overtimeRequests.length,0);
  // manager rejection path: rejected at manager stage, admin stage never happens
  db.punches.push({id:'p2',employeeId:13,name:'Mariam',branch:B,in:new Date(t0).toISOString(),out:null,inLocation:{kiosk:true}});
  employeeAction(db,mariam,'overtime_request_create',{punchId:'p2',reason:'y'},t8);
- const r2=db.overtimeRequests[1];
+ const r2=db.overtimeRequests.find(x=>x.punchId==='p2');
  employeeAction(db,manager,'overtime_request_review',{id:r2.id,approved:false,note:'مش مناسب'},t8+60e3);
  assert.equal(r2.status,'rejected');
  assert.throws(()=>employeeAction(db,admin,'overtime_request_review',{id:r2.id,approved:true},t8+120e3),/INVALID_STATE/);
