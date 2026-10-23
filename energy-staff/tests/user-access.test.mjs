@@ -150,3 +150,45 @@ test('locations/policy controls: admin default, scoped grant, invalid input reje
  assert.equal(db.rules.breakMinutes,20,'rules updated');assert.equal(db.rules.version,v0+1,'version bumped');assert.equal(db.ruleVersions.at(-1).before.breakMinutes,15,'rollback snapshot kept');
  assert.throws(()=>employeeAction(db,mariam,'policy_settings_update',{rules:{breakMinutes:2000}},Date.now()),/INVALID_INPUT/,'out-of-range rejected');
 });
+test('overtime continuation: 8h gate, two-stage manager then admin approval, no auto hours',()=>{
+ const {db,mariam}=seed();
+ const B2=db.branches.find(b=>b.name!==B).name;
+ db.staff.push({id:40,name:'Mgr',position:'مدير التدريب',department:'التدريب',branch:B});
+ db.staff.push({id:99,name:'Mgr2',position:'مدير التدريب',department:'التدريب',branch:A});
+ const manager={id:40,role:'manager',position:'مدير التدريب',branch:B,full_name:'Mgr'};
+ const admin={id:1,role:'admin',position:'كابتن',branch:A,full_name:'Admin'};
+ const t0=Date.parse('2026-10-23T08:00:00Z'),t8=t0+8*3600e3+60e3;
+ db.punches.push({id:'p1',employeeId:13,name:'Mariam',branch:B,in:new Date(t0).toISOString(),out:null,inLocation:{kiosk:true}});
+ // too early: before 8h
+ assert.throws(()=>employeeAction(db,mariam,'overtime_request_create',{punchId:'p1',reason:'شغل'},t0+7*3600e3),/TOO_EARLY/);
+ // employee cannot review own
+ assert.throws(()=>employeeAction(db,mariam,'overtime_request_review',{id:'x',approved:true},t8),/NOT_FOUND|FORBIDDEN/);
+ // create after 8h
+ employeeAction(db,mariam,'overtime_request_create',{punchId:'p1',reason:'شيفت ناقص'},t8);
+ const r=db.overtimeRequests[0];assert.equal(r.status,'pending_manager');
+ // duplicate blocked
+ assert.throws(()=>employeeAction(db,mariam,'overtime_request_create',{punchId:'p1',reason:'x'},t8+60e3),/DUPLICATE/);
+ // manager out of scope (staff 21 other branch) cannot review: build out-of-scope manager
+ const otherMgr={id:99,full_name:'Mgr2',role:'manager',position:'مدير التدريب',branch:A};
+ assert.throws(()=>employeeAction(db,otherMgr,'overtime_request_review',{id:r.id,approved:true},t8+120e3),/FORBIDDEN/);
+ // direct manager approves -> pending_admin (still not payable/approved)
+ employeeAction(db,manager,'overtime_request_review',{id:r.id,approved:true},t8+180e3);
+ assert.equal(r.status,'pending_admin');assert.equal(r.managerReview.by,manager.full_name);
+ // manager cannot do the admin stage
+ assert.throws(()=>employeeAction(db,manager,'overtime_request_review',{id:r.id,approved:true},t8+240e3),/FORBIDDEN|INVALID_STATE/);
+ // admin approves -> approved; punch untouched (no fabricated hours)
+ employeeAction(db,admin,'overtime_request_review',{id:r.id,approved:true},t8+300e3);
+ assert.equal(r.status,'approved');
+ assert.equal(db.punches[0].out,null,'no auto-checkout');
+ assert.ok(!('manualHours' in db.punches[0])&&!('overtimeHours' in db.punches[0]),'no hours written');
+ // visibility: employee sees own; out-of-scope manager sees none
+ assert.equal(visibleWorkspace(db,mariam).overtimeRequests.length,1);
+ assert.equal(visibleWorkspace(db,otherMgr).overtimeRequests.length,0);
+ // manager rejection path: rejected at manager stage, admin stage never happens
+ db.punches.push({id:'p2',employeeId:13,name:'Mariam',branch:B,in:new Date(t0).toISOString(),out:null,inLocation:{kiosk:true}});
+ employeeAction(db,mariam,'overtime_request_create',{punchId:'p2',reason:'y'},t8);
+ const r2=db.overtimeRequests[1];
+ employeeAction(db,manager,'overtime_request_review',{id:r2.id,approved:false,note:'مش مناسب'},t8+60e3);
+ assert.equal(r2.status,'rejected');
+ assert.throws(()=>employeeAction(db,admin,'overtime_request_review',{id:r2.id,approved:true},t8+120e3),/INVALID_STATE/);
+});
