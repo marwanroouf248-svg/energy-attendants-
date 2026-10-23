@@ -91,3 +91,41 @@ test('messaging grant: none hides messages, view blocks send, edit allows; no gr
  employeeAction(db,mariam,'chat_send',{body:'back',room:'branch'},Date.now());
  assert.ok(db.chatMessages.some(m=>m.body==='back'),'edit: send works');
 });
+test('extended items: faults/swaps/docs/kiosk/announcements enforce only with a grant, defaults unchanged',()=>{
+ const {db,mariam}=seed();
+ const s20=db.staff.find(s=>s.id===20);
+ // defaults unchanged without grants
+ employeeAction(db,mariam,'fault_create',{machine:'جهاز الجري 3',note:'صوت غريب'},Date.parse('2026-10-23T10:00:00Z'));
+ assert.equal(db.faultReports.length,1,'default: employee creates fault');
+ assert.throws(()=>employeeAction(db,mariam,'fault_resolve',{id:db.faultReports[0].id},Date.now()),/FORBIDDEN/,'default: employee cannot resolve');
+ assert.throws(()=>employeeAction(db,mariam,'doc_add',{employeeId:20,type:'عقد',expiry:'2027-01-01'},Date.now()),/FORBIDDEN/,'default: employee cannot add docs');
+ assert.throws(()=>employeeAction(db,mariam,'announcement_create',{kind:'branch',branch:B,title:'x',body:'y'},Date.now()),/FORBIDDEN/,'default: employee cannot announce');
+ // faults: none blocks create+hides; approve grants resolve
+ db.userAccess.grants['13']={faults:{level:'none',branches:'own',departments:'own'}};
+ assert.throws(()=>employeeAction(db,mariam,'fault_create',{machine:'x',note:'y'},Date.now()),/FORBIDDEN/,'faults none: create denied');
+ assert.equal(visibleWorkspace(db,mariam).faultReports.length,0,'faults none: hidden');
+ db.userAccess.grants['13']={faults:{level:'approve',branches:'own',departments:'own'}};
+ db.faultReports[0].status='open';
+ employeeAction(db,mariam,'fault_resolve',{id:db.faultReports[0].id,note:'اتصلح'},Date.now());
+ assert.equal(db.faultReports[0].status,'resolved','faults approve: resolve works in scope');
+ // docs edit grant allows add in scope, denies out of scope
+ db.userAccess.grants['13']={docs:{level:'edit',branches:'own',departments:'own'}};
+ employeeAction(db,mariam,'doc_add',{employeeId:20,type:'عقد',expiry:'2027-01-01'},Date.now());
+ assert.equal(db.documents.length,1,'docs edit: add works in scope');
+ assert.throws(()=>employeeAction(db,mariam,'doc_add',{employeeId:21,type:'عقد',expiry:'2027-01-01'},Date.now()),/FORBIDDEN/,'docs edit: other branch denied');
+ // kiosk edit grant allows pin set in scope
+ db.userAccess.grants['13']={kiosk:{level:'edit',branches:'own',departments:'own'}};
+ employeeAction(db,mariam,'kiosk_pin_set',{employeeId:20,pin:'4321'},Date.now());
+ assert.ok(db.staff.find(s=>s.id===20).pinHash,'kiosk edit: pin set in scope');
+ // announcements edit grant allows branch-scoped create for employee
+ db.userAccess.grants['13']={announcements:{level:'edit',branches:'own',departments:'own'}};
+ employeeAction(db,mariam,'announcement_create',{kind:'branch',branch:B,title:'تنبيه',body:'محتوى'},Date.now());
+ assert.equal(db.announcements.length,1,'announcements edit: create works');
+ db.userAccess.grants['13']={announcements:{level:'none',branches:'own',departments:'own'}};
+ assert.equal(visibleWorkspace(db,mariam).announcements.length,0,'announcements none: hidden');
+ assert.throws(()=>employeeAction(db,mariam,'announcement_ack',{id:db.announcements[0].id},Date.now()),/FORBIDDEN/,'announcements none: ack denied');
+ // swaps: none blocks request
+ db.userAccess.grants['13']={swaps:{level:'none',branches:'own',departments:'own'}};
+ db.shiftAssignments.push({id:'sa13',employeeId:13,employeeName:'Mariam',branch:B,day:'2026-10-25',start:'09:00',end:'17:00'});
+ assert.throws(()=>employeeAction(db,mariam,'shift_swap_request',{shiftId:'sa13',targetEmployeeId:20},Date.parse('2026-10-23T10:00:00Z')),/FORBIDDEN/,'swaps none: request denied');
+});
