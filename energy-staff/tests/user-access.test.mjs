@@ -204,8 +204,23 @@ test('overtime continuation: 8h gate, two-stage manager then admin approval, no 
  db.punches.push({id:'p3',employeeId:20,name:'Cap B2',branch:B,in:new Date(t0).toISOString(),out:null,inLocation:{kiosk:true}});
  employeeAction(db,capB2,'overtime_request_create',{punchId:'p3',reason:'z'},t8);
  const r3=db.overtimeRequests.find(x=>x.punchId==='p3');
+ // before assignment, Mariam (role employee) does NOT receive capB2's request
+ assert.ok(!visibleWorkspace(db,mariam).overtimeRequests.some(x=>String(x.punchId)==='p3'),'no request before assignment');
+ // snapshot her unrelated access — assignment must not widen it
+ const staffBefore=visibleWorkspace(db,mariam).staff.map(s=>s.id).sort().join(',');
+ const punchesBefore=visibleWorkspace(db,mariam).punches.length;
+ const reqsBefore=visibleWorkspace(db,mariam).requests.length;
  employeeAction(db,admin,'overtime_manager_assign',{employeeId:20,managerId:13},t8+60e3);
+ // after assignment she RECEIVES the pending request...
+ const mariamView=visibleWorkspace(db,mariam);
+ assert.ok(mariamView.overtimeRequests.some(x=>String(x.punchId)==='p3'&&x.status==='pending_manager'),'assigned employee-role manager receives pending request');
+ // ...without any unrelated team access changing
+ assert.equal(visibleWorkspace(db,mariam).staff.map(s=>s.id).sort().join(','),staffBefore,'staff visibility unchanged by assignment');
+ assert.equal(visibleWorkspace(db,mariam).punches.length,punchesBefore,'punch visibility unchanged');
+ assert.equal(visibleWorkspace(db,mariam).requests.length,reqsBefore,'requests visibility unchanged');
  employeeAction(db,mariam,'overtime_request_review',{id:r3.id,approved:true},t8+120e3);
+ // once it leaves pending_manager she no longer sees it
+ assert.ok(!visibleWorkspace(db,mariam).overtimeRequests.some(x=>String(x.punchId)==='p3'),'gone after stage 1');
  assert.equal(r3.status,'pending_admin');assert.equal(r3.managerReview.by,'Mariam');
  employeeAction(db,admin,'overtime_request_review',{id:r3.id,approved:false},t8+180e3);
  assert.equal(r3.status,'rejected');
