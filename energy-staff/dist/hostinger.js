@@ -98,3 +98,59 @@ render=function(){
   $('#changeAccountPassword').onclick=changeAccountPassword;
  }
 };
+
+// تحديث تلقائي للبيانات: قبل كده الرسايل والإعلانات الجديدة ما كانتش بتظهر للموظف
+// اللي فاتح التطبيق إلا بعد reload يدوي أو زرار «تحديث البيانات». كل ٣٠ ثانية بنسحب
+// أحدث نسخة من السيرفر، مع تخطي الدورة لو المستخدم بيكتب في خانة أو فاتح نافذة إدخال
+// عشان ما يضيعش اللي بيكتبه، والحفاظ على مسودة رسالة الشات لو بيكتبها.
+setInterval(async()=>{
+ try{
+  if(!nodeUser||document.hidden||nodeSaving||nodeWriteBlocked)return;
+  if(document.querySelector('#modal[open]'))return;
+  let draft=null,focused=false;
+  if(page==='chat'){
+   const inp=document.querySelector('#x-chat-body');
+   if(inp){draft=inp.value;focused=document.activeElement===inp}
+  }else{
+   const typing=[...document.querySelectorAll('#app input,#app textarea')].some(el=>el.type!=='checkbox'&&el.type!=='radio'&&el.value&&String(el.value).trim());
+   if(typing)return;
+  }
+  const lastAt=db&&Array.isArray(db.chatMessages)&&db.chatMessages.length?String(db.chatMessages[db.chatMessages.length-1].at):'';
+  await refreshServerData();
+  if(page==='chat'&&draft!=null){
+   const inp2=document.querySelector('#x-chat-body');if(inp2){inp2.value=draft;if(focused)inp2.focus()}
+  }else if(db&&Array.isArray(db.chatMessages)&&db.chatMessages.length&&String(db.chatMessages[db.chatMessages.length-1].at)!==lastAt){
+   toast('في رسايل جديدة في شات الفريق 💬');
+  }
+ }catch(e){/* الدورة الجاية هتحاول تاني */}
+},30000);
+
+// صفحة «أكسس كل موظف»: كل حسابات الدخول الحقيقية على السيرفر ووصول كل شخص في مكان واحد.
+navs.push(['staff-access','⚿','أكسس كل موظف']);
+const STAFF_ACCESS_ITEMS=[['attendance','الحضور والانصراف'],['records','سجل الحضور'],['requests','الطلبات'],['tasks','المهام'],['shifts','الشفتات'],['breaks','البريكات'],['classes','الكلاسات'],['sales','السيلز والمكالمات'],['score','التقييم والنقاط'],['reports','التقارير'],['staff','فريق العمل'],['payroll','المرتبات']];
+function staffAccessScope(m){
+ if(m.role==='admin')return '<small><b>إدارة كاملة:</b> كل البنود على الفرعين</small>';
+ if(m.role!=='manager')return '<small>بياناته الشخصية (حضوره، مهامه، طلباته، نقاطه) + الشات ولائحة العمل</small>';
+ const g=((db.accessMatrix&&db.accessMatrix.grants)||{})[m.position];
+ if(!g)return '<small>مدير — مفيش نطاقات محفوظة لمسماه في مصفوفة الأكسس</small>';
+ const byLevel={edit:[],approve:[],view:[]};
+ STAFF_ACCESS_ITEMS.forEach(([item,label])=>{const c=g[item];const lvl=c&&c.level||'none';if(byLevel[lvl])byLevel[lvl].push(label)});
+ const names={edit:'تعديل',approve:'اعتماد',view:'عرض'};
+ return ['edit','approve','view'].map(l=>byLevel[l].length?`<small><b>${names[l]}:</b> ${byLevel[l].join('، ')}</small>`:'').filter(Boolean).join('<br>')||'<small>—</small>';
+}
+function staffAccessView(){
+ const stById={};(db.staff||[]).forEach(s=>stById[String(s.id)]=s);
+ const order={approved:0,pending:1,disabled:2,rejected:3};
+ const members=(serverMembers||[]).slice().sort((a,b)=>(order[a.status]??4)-(order[b.status]??4)||String(a.full_name).localeCompare(String(b.full_name),'ar'));
+ const rows=members.map(m=>{
+  const st=stById[String(m.id)]||{};
+  const roleLabel=m.role==='admin'?'إدارة':m.role==='manager'?'مدير قسم':'موظف';
+  const ba=st.branchAccess||'own';
+  const baLabel=ba==='both'?'الفرعين':ba==='any'?'أي فرع':'فرعه فقط';
+  const statusLabel=({pending:'منتظر الموافقة',approved:'مقبول',rejected:'مرفوض',disabled:'موقوف'})[m.status]||m.status;
+  return `<tr><td><b>${esc(m.full_name)}</b><br><small>${esc(m.email||'—')}</small></td><td>${esc(m.position||'—')}<br><small>${esc(st.department||'')}</small></td><td>${roleLabel}<br><small>${statusLabel}</small></td><td>${esc(m.branch||st.branch||'—')}<br><small>البصمة: ${baLabel}</small></td><td style="min-width:240px">${staffAccessScope(m)}</td><td><button type="button" data-sa-review="${m.id}">إدارة الحساب</button></td></tr>`;
+ }).join('');
+ return card('أكسس كل موظف — كل حسابات الدخول ووصولها',`<p class="empty" style="margin:0 0 12px">دي النظرة المجمعة لكل حساب دخول على السيرفر. تغيير الدور أو المسمى أو الفرع بيتم من زرار «إدارة الحساب»، فروع البصمة التفصيلية لكل موظف من صفحة «أكسس حضور الفروع»، ونطاقات المديرين التفصيلية من «مصفوفة الأكسس».</p><div class="table-wrap"><table><tr><th>الموظف</th><th>المسمى / القسم</th><th>الدور / الحالة</th><th>الفرع / البصمة</th><th>الوصول المسموح</th><th></th></tr>${rows||'<tr><td colspan="6">لا توجد حسابات بعد</td></tr>'}</table></div>`);
+}
+const staffAccessPrevRender=render;
+render=function(){staffAccessPrevRender();if(page==='staff-access'){if(!nodeUser||nodeUser.role!=='admin'){$('#app').innerHTML='<p class="empty">صفحة خاصة بالإدارة</p>';return}$('#app').innerHTML=staffAccessView();document.querySelectorAll('[data-sa-review]').forEach(b=>b.onclick=()=>reviewServerAccount(Number(b.dataset.saReview)))}};
