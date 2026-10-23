@@ -73,3 +73,21 @@ test('sanitizeUserAccess via emptyWorkspace/hydrate shape drops garbage',async()
  const ua=sanitizeUserAccess({grants:{'13':{tasks:{level:'edit',branches:'both',departments:'all'},evil:{level:'edit'},attendance:{level:'superuser'}},'x-y':{tasks:{level:'view'}}}});
  assert.deepEqual(ua.grants,{'13':{tasks:{level:'edit',branches:'both',departments:'all'}}});
 });
+test('messaging grant: none hides messages, view blocks send, edit allows; no grant unchanged',()=>{
+ const {db,mariam}=seed();
+ db.chatMessages=[{id:'m1',room:'all',body:'hi',at:'2026-10-23T10:00:00Z'},{id:'m2',room:'branch',branch:B,body:'branch hi',at:'2026-10-23T10:01:00Z'},{id:'m3',room:'branch',branch:A,body:'other branch',at:'2026-10-23T10:02:00Z'}];
+ const base=visibleWorkspace(db,mariam);
+ assert.deepEqual(base.chatMessages.map(m=>m.id),['m1','m2'],'default: all-room + own branch room');
+ employeeAction(db,mariam,'chat_send',{body:'hello',room:'branch'},Date.parse('2026-10-23T13:00:00Z'));
+ assert.ok(db.chatMessages.some(m=>m.body==='hello'),'default: send works');
+ db.userAccess.grants['13']={messaging:{level:'view',branches:'own',departments:'own'}};
+ const wv=visibleWorkspace(db,mariam);
+ assert.deepEqual(wv.chatMessages.map(m=>m.id).filter(i=>i[0]==='m'),['m1','m2'],'view: still receives rooms');
+ assert.throws(()=>employeeAction(db,mariam,'chat_send',{body:'x',room:'branch'},Date.now()),/FORBIDDEN/,'view: send denied');
+ db.userAccess.grants['13']={messaging:{level:'none',branches:'own',departments:'own'}};
+ assert.equal(visibleWorkspace(db,mariam).chatMessages.length,0,'none: no messages visible');
+ assert.throws(()=>employeeAction(db,mariam,'chat_send',{body:'x',room:'all'},Date.now()),/FORBIDDEN/,'none: send denied');
+ db.userAccess.grants['13']={messaging:{level:'edit',branches:'own',departments:'own'}};
+ employeeAction(db,mariam,'chat_send',{body:'back',room:'branch'},Date.now());
+ assert.ok(db.chatMessages.some(m=>m.body==='back'),'edit: send works');
+});

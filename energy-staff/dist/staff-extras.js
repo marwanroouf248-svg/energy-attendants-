@@ -31,7 +31,7 @@ function nav(){
  add('faults','بلاغات الأعطال');
  add('shift-swap','تبديل الشفتات');
  add('objections','النقاط والاعتراضات');
- add('chat','شات الفرع');
+ if(((db.myAccess||{}).messaging||{}).level!=='none')add('chat','شات الفرع');
  if(canReview())add('documents','وثائق الفريق');
  if(nodeUser.role==='admin')add('kiosk-admin','كشك البصمة');
 }
@@ -102,11 +102,14 @@ function documentsPanel(){
 let chatRoom='branch';
 function chatPanel(){
  const isAdmin=nodeUser.role==='admin';
+ const msgLvl=((db.myAccess||{}).messaging||{}).level||null;
+ if(msgLvl==='none'&&!isAdmin)return '<section class="x-ui" dir="rtl"><div class="x-kicker">ENERGY CLUB / TEAM CHAT</div><h2>شات الفريق 💬</h2><p class="x-hint">الشات مقيّد لحسابك من الإدارة.</p></section>';
+ const canSend=isAdmin||!msgLvl||msgLvl==='edit';
  const roomMsgs=(db.chatMessages||[]).filter(m=>chatRoom==='all'?m.room==='all':(m.room!=='all'&&(isAdmin?m.branch===(chatBranch||nodeUser.branch):m.branch===nodeUser.branch)));
  const fmtCairo=iso=>{const d=new Date(iso);if(!Number.isFinite(d.getTime()))return String(iso||'');return d.toLocaleString('en-GB',{timeZone:'Africa/Cairo',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).replace(',',' ')};
  const rows=roomMsgs.map(m=>'<div class="x-msg'+(m.manager?' x-msg-mgr':'')+'"><b>'+h(m.name)+(m.manager?' <small>(إدارة)</small>':'')+'</b> '+h(m.body)+'<small>'+h(fmtCairo(m.at))+'</small></div>').join('');
  const branchPick=isAdmin&&chatRoom==='branch'?'<select id="x-chat-branch">'+db.branches.map(b=>'<option '+(b.name===(chatBranch||nodeUser.branch)?'selected':'')+'>'+h(b.name)+'</option>').join('')+'</select>':'';
- return '<section class="x-ui" dir="rtl"><div class="x-kicker">ENERGY CLUB / TEAM CHAT</div><h2>شات الفريق 💬</h2><p>شات لكل فرع لوحده، وشات عام لكل الموظفين في الفرعين. الرسايل نص بس وبتتجدد تلقائيًا كل ٣٠ ثانية.</p><div class="x-chips"><button type="button" class="x-chip" id="x-room-branch">'+(chatRoom==='branch'?'▶ ':'')+'شات الفرع</button><button type="button" class="x-chip" id="x-room-all">'+(chatRoom==='all'?'▶ ':'')+'الشات العام</button>'+branchPick+'</div><div class="x-chat">'+ (rows||'<p class="x-hint">لا توجد رسايل بعد. ابدأ الكلام!</p>')+'</div><div class="x-form x-chat-form"><input id="x-chat-body" maxlength="500" placeholder="اكتب رسالتك..."><button class="primary" id="x-chat-send">إرسال</button></div></section>';
+ return '<section class="x-ui" dir="rtl"><div class="x-kicker">ENERGY CLUB / TEAM CHAT</div><h2>شات الفريق 💬</h2><p>شات لكل فرع لوحده، وشات عام لكل الموظفين في الفرعين. الرسايل نص بس وبتتجدد تلقائيًا كل ٣٠ ثانية.</p><div class="x-chips"><button type="button" class="x-chip" id="x-room-branch">'+(chatRoom==='branch'?'▶ ':'')+'شات الفرع</button><button type="button" class="x-chip" id="x-room-all">'+(chatRoom==='all'?'▶ ':'')+'الشات العام</button>'+branchPick+'</div><div class="x-chat">'+ (rows||'<p class="x-hint">لا توجد رسايل بعد. ابدأ الكلام!</p>')+'</div><div class="x-form x-chat-form">'+(canSend?'<input id="x-chat-body" maxlength="500" placeholder="اكتب رسالتك..."><button class="primary" id="x-chat-send">إرسال</button>':'<p class="x-hint">صلاحيتك استلام وقراءة بس — الإرسال مقيّد من الإدارة.</p>')+'</div></section>';
 }
 let chatBranch=null;
 function openShiftsBlock(){
