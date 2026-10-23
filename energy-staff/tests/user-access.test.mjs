@@ -171,11 +171,20 @@ test('overtime continuation: 8h gate, two-stage manager then admin approval, no 
  // manager out of scope (staff 21 other branch) cannot review: build out-of-scope manager
  const otherMgr={id:99,full_name:'Mgr2',role:'manager',position:'مدير التدريب',branch:A};
  assert.throws(()=>employeeAction(db,otherMgr,'overtime_request_review',{id:r.id,approved:true},t8+120e3),/FORBIDDEN/);
+ // admin (even Marwan) cannot do the direct-manager stage
+ assert.throws(()=>employeeAction(db,admin,'overtime_request_review',{id:r.id,approved:true},t8+150e3),/FORBIDDEN/);
+ // manager of same branch but another department is not the direct manager
+ const otherDeptMgr={id:41,full_name:'Mgr3',role:'manager',position:'مدير السيلز',branch:B};
+ db.staff.push({id:41,name:'Mgr3',position:'مدير السيلز',department:'السيلز',branch:B});
+ assert.throws(()=>employeeAction(db,otherDeptMgr,'overtime_request_review',{id:r.id,approved:true},t8+160e3),/FORBIDDEN/);
  // direct manager approves -> pending_admin (still not payable/approved)
  employeeAction(db,manager,'overtime_request_review',{id:r.id,approved:true},t8+180e3);
  assert.equal(r.status,'pending_admin');assert.equal(r.managerReview.by,manager.full_name);
  // manager cannot do the admin stage
  assert.throws(()=>employeeAction(db,manager,'overtime_request_review',{id:r.id,approved:true},t8+240e3),/FORBIDDEN|INVALID_STATE/);
+ // another admin (Karim, id 19) cannot do the final stage — Marwan (id 1) only
+ const karim={id:19,role:'admin',position:'مدير عام',branch:A,full_name:'Karim'};
+ assert.throws(()=>employeeAction(db,karim,'overtime_request_review',{id:r.id,approved:true},t8+250e3),/FORBIDDEN/);
  // admin approves -> approved; punch untouched (no fabricated hours)
  employeeAction(db,admin,'overtime_request_review',{id:r.id,approved:true},t8+300e3);
  assert.equal(r.status,'approved');

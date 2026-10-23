@@ -45,7 +45,7 @@ setInterval(async()=>{if(!nodeUser)return;try{const s=await nodeApi('session');i
 let reqFilter={status:'all',type:'all',q:''};
 function otReviewHtml(){
  if(!nodeUser||!['admin','manager'].includes(nodeUser.role))return '';
- const rows=(db.overtimeRequests||[]).filter(r=>nodeUser.role==='admin'?r.status==='pending_admin':r.status==='pending_manager');
+ const rows=(db.overtimeRequests||[]).filter(r=>nodeUser.role==='admin'?(Number(nodeUser.id)===1&&r.status==='pending_admin'):r.status==='pending_manager');
  if(!rows.length)return '';
  return '<section class="card"><h3>طلبات تكملة الشيفت (إضافي)</h3><p class="muted">مدير مباشر ثم الإدارة — الاتنين لازم يوافقوا.</p>'+rows.map(r=>`<div class="request"><div class="details"><strong>${esc(r.employeeName)} <span style="color:#a2aaa4;font-weight:400">/ ${esc(r.branch)}</span></strong><p>${esc(r.reason||'')}</p><p class="muted">${esc(stamp(r.createdAt))}</p></div><div class="actions"><button class="primary" data-ot-approve="${r.id}">قبول</button><button class="reject" data-ot-reject="${r.id}">رفض</button></div></div>`).join('')+'</section>'}
 async function otReview(id,approved){
