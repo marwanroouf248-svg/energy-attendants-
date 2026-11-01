@@ -1,0 +1,109 @@
+.payroll-period{flex-wrap:wrap;align-items:flex-end}.payroll-period label{margin:0}.payroll-period input{display:block;width:auto;margin-top:5px}.payroll-layout{display:grid;grid-template-columns:minmax(260px,.8fr) minmax(380px,1.5fr);gap:22px;align-items:start}.payroll-editor{position:sticky;top:15px}.payroll-fields{padding:20px}.payroll-fields fieldset{border:0;padding:0;margin:0;min-width:0}.payroll-fields input,.payroll-fields textarea,.payroll-fields select{display:block;width:100%;padding:10px;border:1px solid var(--line);border-radius:7px;background:white}.payroll-fields .permission-item input{width:18px}.payroll-fields small{font-size:10px;color:#83917f}.payroll-fields button{width:100%;margin-top:12px}.payroll-dirty{color:#b18435;font-size:11px}.payslip-paper{border:1px solid var(--line);border-radius:13px;background:#fff;padding:26px}.payslip-person{padding:16px 0}.payslip-person h2{margin:0;font-size:20px}.payslip-total{background:#edf5e9;color:#275438;border:1px solid #dfebd8;border-radius:11px;padding:20px;display:flex;flex-direction:column;gap:13px;margin:0 0 20px}.payslip-total strong{font-size:28px;line-height:1.8}.payslip-total small{font-size:10px;color:#73926b}.payslip-total.negative-total{background:#fff0ed;border-color:#f1d6cf;color:#b05141}.payslip-paper table{white-space:normal}.payslip-paper td{padding:11px 9px}.payslip-paper tr:last-child td{font-weight:800}.payslip-paper h3{font-size:13px;margin-top:25px}.payroll-notes{white-space:pre-wrap;padding:15px 0}.payslip-paper .report-brand>div:last-child{max-width:170px}.payroll-fields [hidden]{display:none!important}@media(max-width:1100px){.payroll-layout{grid-template-columns:1fr}.payroll-editor{position:static}}@media(max-width:760px){.payslip-paper{padding:16px}.payslip-total strong{font-size:24px}.payroll-period label{width:100%}.payroll-period input{width:100%}}@media print{body.printing-payroll{background:#fff;font-family:Arial,sans-serif}body.printing-payroll aside,body.printing-payroll header,body.printing-payroll footer,body.printing-payroll .page-heading,body.printing-payroll .no-print,body.printing-payroll #toast,body.printing-payroll dialog,body.printing-payroll #app>.card,body.printing-payroll .payroll-editor,body.printing-payroll #payrollPreview>.notice{display:none!important}body.printing-payroll main{margin:0}body.printing-payroll .content{padding:0}body.printing-payroll .payroll-layout{display:block}body.printing-payroll .payslip-paper{padding:0;border:0}body.printing-payroll table{width:100%;font-size:10px;white-space:normal}body.printing-payroll th,body.printing-payroll td{font-size:10px;padding:7px;border-bottom:1px solid #ccc}body.printing-payroll .table-wrap{overflow:visible}body.printing-payroll tr{break-inside:avoid}body.printing-payroll .payslip-total,body.printing-payroll .report-brand,body.printing-payroll .report-signatures{break-inside:avoid}.payslip-paper{print-color-adjust:exact;-webkit-print-color-adjust:exact}}
+.payroll-lines-box{border:1px dashed var(--line,#d8d2c4);border-radius:12px;padding:10px;display:grid;gap:8px}
+.payroll-lines-box legend{font-size:.85rem;font-weight:700;padding:0 6px}
+.payroll-line-row{display:grid;grid-template-columns:1.2fr .9fr 1fr 1.4fr auto;gap:6px;align-items:center}
+.payroll-line-row input,.payroll-line-row select{width:100%}
+@media (max-width:1100px){.payroll-line-row{grid-template-columns:1fr 1fr}.payroll-line-row [data-line-reason]{grid-column:1/-2}}
+
+.branch-report-paper{border:1px solid var(--line);border-radius:13px;background:#fff;padding:26px;margin-top:14px}
+.branch-report-group h3{font-size:13px;margin:18px 0 8px}
+.branch-report-total td{font-weight:800;background:#f4f1e6}
+.branch-slip{margin-top:14px}
+@media print{
+body.printing-branch-report{background:#fff}
+body.printing-branch-report aside,body.printing-branch-report header,body.printing-branch-report footer,body.printing-branch-report .page-heading,body.printing-branch-report #toast,body.printing-branch-report dialog,body.printing-branch-report .no-print,body.printing-branch-report #app>*:not(#branchReportCard){display:none!important}
+body.printing-branch-report #app>#branchReportCard{display:block!important}
+body.printing-branch-report main{margin:0}
+body.printing-branch-report .content{padding:0}
+body.printing-branch-report .branch-slip{display:block!important;break-before:page}
+body.printing-branch-report .branch-report-paper{border:0;padding:0}
+body.printing-branch-report table{width:100%;font-size:10px;white-space:normal}
+body.printing-branch-report th,body.printing-branch-report td{font-size:10px;padding:7px;border-bottom:1px solid #ccc}
+body.printing-branch-report .table-wrap{overflow:visible}
+body.printing-branch-report tr{break-inside:avoid}
+body.printing-branch-report .payslip-total,body.printing-branch-report .report-brand,body.printing-branch-report .report-signatures{break-inside:avoid}
+body.printing-one-slip{background:#fff}
+body.printing-one-slip aside,body.printing-one-slip header,body.printing-one-slip footer,body.printing-one-slip .page-heading,body.printing-one-slip #toast,body.printing-one-slip dialog,body.printing-one-slip .no-print,body.printing-one-slip #app>*:not(#branchReportCard){display:none!important}
+body.printing-one-slip #app>#branchReportCard{display:block!important}
+body.printing-one-slip #branchReportCard .card>*:not(.print-target){display:none!important}
+body.printing-one-slip .branch-slip.print-target{display:block!important}
+body.printing-one-slip main{margin:0}
+body.printing-one-slip .content{padding:0}
+body.printing-one-slip .payslip-paper{border:0;padding:0;print-color-adjust:exact;-webkit-print-color-adjust:exact}
+body.printing-one-slip table{width:100%;font-size:10px;white-space:normal}
+body.printing-one-slip th,body.printing-one-slip td{font-size:10px;padding:7px;border-bottom:1px solid #ccc}
+body.printing-one-slip tr{break-inside:avoid}
+body.printing-one-slip .payslip-total,body.printing-one-slip .report-brand,body.printing-one-slip .report-signatures{break-inside:avoid}
+}
+
+/* closing-form UX (2026-10-30) */
+.payroll-top{padding:14px 20px 0}
+.payroll-nav{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+.payroll-nav button{width:auto;margin:0;padding:8px 14px}
+.payroll-nav span{font-size:12px;color:#83917f}
+.payroll-summary{background:#edf5e9;border:1px solid #dfebd8;border-radius:11px;padding:12px 14px;color:#275438}
+.payroll-summary .ps-name{font-weight:800;margin-bottom:8px}
+.payroll-summary .ps-name small{font-weight:400;color:#73926b}
+.payroll-summary .ps-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.payroll-summary .ps-grid span{display:block;font-size:11px;color:#73926b}
+.payroll-summary .ps-grid b{font-size:20px;line-height:1.5}
+.payroll-summary .ps-grid small{display:block;font-size:10px;color:#b05141}
+.payroll-summary .ps-warn{margin-top:8px;font-size:11px;color:#b05141}
+.payroll-actions{display:grid;gap:8px;position:sticky;bottom:0;background:linear-gradient(to top,#fff 80%,transparent);padding-top:8px}
+.payroll-actions button{margin-top:0!important}
+.payroll-actions .pr-close{background:#275438;color:#fff}
+.mh-total{margin:6px 0 10px;background:#edf5e9;border:1px solid #dfebd8;border-radius:10px;padding:9px 12px;color:#275438;font-size:14px}
+.mh-total b{font-size:19px}
+.ext-tag{color:#b05141;font-size:11px}
+.payroll-ext{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0}
+.payroll-ext input{flex:1;min-width:180px;padding:8px}
+.payroll-ext small{flex-basis:100%;color:#73926b;font-size:11px}
+
+/* dept/branch/status filter bar (2026-10-30) */
+.payroll-filter{flex-wrap:wrap;align-items:flex-end;gap:12px;margin:14px 0}
+.payroll-filter label{margin:0;font-weight:700;font-size:12px}
+.payroll-filter select{display:block;margin-top:5px;min-width:150px}
+.payroll-filter-count{margin-inline-start:auto;font-weight:800;font-size:13px;color:#8a6a12;background:#faf3dd;border:1px solid #ecdcb0;border-radius:9px;padding:7px 12px}
+@media(max-width:760px){.payroll-filter label,.payroll-filter select{width:100%}.payroll-filter-count{margin-inline-start:0}}
+.pr-remembered{display:block;color:#275438;font-weight:700}
+
+/* manual closing line items: roomy layout (2026-10-30) */
+.payroll-fields .payroll-lines-box{padding:14px;gap:14px}
+.payroll-fields .payroll-line-row{grid-template-columns:1fr;gap:10px;align-items:stretch;padding:12px;border:1px solid var(--line,#d8d2c4);border-radius:12px;background:rgba(255,255,255,.55)}
+.payroll-fields .payroll-line-row input,.payroll-fields .payroll-line-row select{min-height:48px;padding:12px 14px;font-size:16px;line-height:1.4;box-sizing:border-box;width:100%;min-width:0}
+.payroll-fields .payroll-line-row [data-line-amount]{grid-column:1/-1}
+.payroll-fields .payroll-line-row [data-line-reason]{grid-column:1/-1}
+.payroll-fields .payroll-line-row [data-line-remove]{grid-column:1/-1;justify-self:end;width:auto;min-height:40px;margin:0;padding:8px 18px;font-size:14px;border:1px solid var(--line,#d8d2c4);border-radius:8px;background:rgba(0,0,0,.04);cursor:pointer}
+@media(max-width:480px){.payroll-fields .payroll-line-row{grid-template-columns:1fr}.payroll-fields .payroll-line-row [data-line-remove]{justify-self:stretch}}
+
+/* Payroll documents are white paper in both themes and print (2026-10-30). */
+html[data-theme] .payslip-paper,html[data-theme] .branch-report-paper{--ink:#25251f;--muted:#62685f;--line:#d8d8ce;color:#25251f;background:#fff}
+html[data-theme] .payslip-paper td,html[data-theme] .payslip-paper th,html[data-theme] .branch-report-paper td,html[data-theme] .branch-report-paper th{color:#25251f;border-color:#d8d8ce}
+html[data-theme] .payslip-paper th,html[data-theme] .branch-report-paper th{background:#f3f2eb}
+html[data-theme] .payslip-paper .payslip-person h2,html[data-theme] .payslip-paper h3,html[data-theme] .payslip-paper .payroll-notes,html[data-theme] .branch-report-paper h3{color:#25251f}
+html[data-theme] .payslip-paper .payslip-person p,html[data-theme] .payslip-paper .report-brand p,html[data-theme] .payslip-paper .report-brand small,html[data-theme] .payslip-paper .report-disclaimer,html[data-theme] .payslip-paper .report-signatures,html[data-theme] .branch-report-paper .report-disclaimer,html[data-theme] .branch-report-paper .report-signatures{color:#62685f}
+html[data-theme] .payslip-paper .payslip-total{color:#705316;background:#faf4e5;border-color:#e7d5a8}
+html[data-theme] .payslip-paper .payslip-total small{color:#52664b}
+html[data-theme] .payslip-paper .payslip-total.negative-total{color:#923a29;background:#fff0ed;border-color:#e2b6aa}
+/* Explicit payroll UI foreground/background pairs, isolated from document paper. */
+@media screen{
+html[data-theme] #app:has(#payrollPeriod){color:#25251f}
+html[data-theme] #app:has(#payrollPeriod)>.card,html[data-theme] .payroll-editor{background:#fff;color:#25251f}
+html[data-theme] #app:has(#payrollPeriod)>.card>.card-head h2,html[data-theme] .payroll-editor>.card-head h2{color:#25251f}
+html[data-theme] #app:has(#payrollPeriod)>.card td{color:#25251f}
+html[data-theme] #app:has(#payrollPeriod)>.card th{color:#555b50;background:#f3f2eb}
+html[data-theme] .payroll-filter label,html[data-theme] .payroll-period label,html[data-theme] .payroll-fields label,html[data-theme] .payroll-lines-box legend{color:#555b50}
+html[data-theme] .payroll-fields input,html[data-theme] .payroll-fields textarea,html[data-theme] .payroll-fields select,html[data-theme] .payroll-period input,html[data-theme] .payroll-filter select{background:#fff;color:#25251f;border-color:#b9baa9}
+html[data-theme="dark"] #app:has(#payrollPeriod){color:#ece7d8}
+html[data-theme="dark"] #app:has(#payrollPeriod)>.card,html[data-theme="dark"] .payroll-editor{background:#1b1a14;color:#ece7d8}
+html[data-theme="dark"] #app:has(#payrollPeriod)>.card>.card-head h2,html[data-theme="dark"] .payroll-editor>.card-head h2{color:#ece7d8}
+html[data-theme="dark"] #app:has(#payrollPeriod)>.card td{color:#ece7d8}
+html[data-theme="dark"] #app:has(#payrollPeriod)>.card th{color:#c4bda5;background:#201f17}
+html[data-theme="dark"] .payroll-filter label,html[data-theme="dark"] .payroll-period label,html[data-theme="dark"] .payroll-fields label,html[data-theme="dark"] .payroll-lines-box legend{color:#c4bda5}
+html[data-theme="dark"] .payroll-fields input,html[data-theme="dark"] .payroll-fields textarea,html[data-theme="dark"] .payroll-fields select,html[data-theme="dark"] .payroll-period input,html[data-theme="dark"] .payroll-filter select{background:#1d1c15;color:#ece7d8;border-color:#736848}
+html[data-theme] .payroll-actions{background:#fff}
+html[data-theme="dark"] .payroll-actions{background:#1b1a14}
+/* Documents stay white even inside report cards in the dark interface. */
+html[data-theme] #app:has(#payrollPeriod) .payslip-paper td,html[data-theme] #app:has(#payrollPeriod) .branch-report-paper td{color:#25251f}
+html[data-theme] #app:has(#payrollPeriod) .payslip-paper th,html[data-theme] #app:has(#payrollPeriod) .branch-report-paper th{color:#555b50;background:#f3f2eb}
+}
